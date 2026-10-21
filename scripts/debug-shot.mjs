@@ -1,0 +1,15 @@
+import { chromium } from 'playwright';
+import { homedir } from 'os';
+import { join } from 'path';
+const exe = join(homedir(), '.cache/ms-playwright/chromium-1234/chrome-linux64/chrome');
+const browser = await chromium.launch({ executablePath: exe, args: ['--enable-unsafe-swiftshader','--use-gl=angle','--use-angle=swiftshader'] });
+const page = await browser.newPage();
+page.on('console', m => console.log('[console]', m.type(), m.text().slice(0,300)));
+page.on('pageerror', e => console.log('[pageerror]', String(e).slice(0,500)));
+page.on('requestfailed', r => console.log('[reqfail]', r.url(), r.failure()?.errorText));
+await page.goto('' + (process.env.BASE_URL||'http://localhost:5271') + '#4.2/31/101.8');
+await page.waitForTimeout(20000);
+console.log('__mapLoaded =', await page.evaluate(() => window.__mapLoaded));
+console.log('webgl2 =', await page.evaluate(() => { const c=document.createElement('canvas'); return !!c.getContext('webgl2'); }));
+await page.screenshot({ path: 'shots/debug.png' });
+await browser.close();

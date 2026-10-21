@@ -1,0 +1,17 @@
+[package]
+name = "geotiles"
+version = "0.1.0"
+edition = "2021"
+description = "Offline tile generator for the 川西 3D outdoor map (DEM terrarium, baked relief, contours)"
+
+[dependencies]
+anyhow = "1"
+image = { version = "0.25", default-features = false, features = ["png"] }
+rayon = "1"
+rusqlite = { version = "0.32", features = ["bundled"] }
+serde_json = "1"
+webp = "0.3"
+
+[profile.release]
+opt-level = 3
+lto = "thin"

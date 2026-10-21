@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>川西 3D 户外地图</title>
+  <style>
+    html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family: "Noto Sans SC", "PingFang SC", sans-serif; }
+    #map { position: absolute; inset: 0; }
+    .hud {
+      position: absolute; top: 10px; left: 10px; z-index: 10;
+      background: rgba(20,24,28,.72); color: #eee; padding: 6px 12px;
+      border-radius: 6px; font-size: 12px; line-height: 1.7; pointer-events: none;
+      font-variant-numeric: tabular-nums; white-space: pre;
+    }
+    .dest {
+      position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 10;
+      display: flex; gap: 8px;
+    }
+    .dest button {
+      background: rgba(20,24,28,.72); color: #eee; border: 1px solid #555;
+      border-radius: 6px; padding: 5px 14px; font-size: 13px; cursor: pointer;
+    }
+    .dest button:hover { background: rgba(60,70,80,.85); }
+    .drawer-toggle {
+      position: absolute; top: 10px; right: 10px; z-index: 11;
+      background: rgba(20,24,28,.8); color: #eee; border: 1px solid #555;
+      border-radius: 6px; padding: 6px 14px; font-size: 13px; cursor: pointer;
+    }
+    .drawer {
+      position: absolute; top: 52px; right: 10px; bottom: 30px; width: 260px; z-index: 10;
+      background: rgba(22,26,30,.9); color: #ddd; border-radius: 8px;
+      padding: 14px; overflow-y: auto; font-size: 13px;
+      transition: transform .2s ease; backdrop-filter: blur(4px);
+    }
+    .drawer.hidden { transform: translateX(300px); }
+    .drawer h3 { margin: 12px 0 6px; font-size: 13px; color: #9fb7c9; font-weight: 600; }
+    .drawer h3:first-child { margin-top: 0; }
+    .drawer label { display: flex; align-items: center; gap: 8px; padding: 3px 0; cursor: pointer; }
+    .drawer input[type=range] { width: 100%; margin: 2px 0 6px 24px; }
+    .drawer .slider-row { display: block; }
+    .drawer .val { color: #7fa3bd; font-size: 11px; margin-left: 24px; }
+    .fps { color: #8fd18a; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <div class="hud" id="hud">加载中…</div>
+  <div class="dest" id="dest"></div>
+  <button class="drawer-toggle" id="drawerToggle">图层 (H)</button>
+  <div class="drawer hidden" id="drawer"></div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
