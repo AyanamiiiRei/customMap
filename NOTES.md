@@ -71,3 +71,39 @@ npm_config_cache="$PWD/.npm-cache"
 - `scripts/shot.mjs` 加 `--disable-crash-reporter`：沙箱里 crashpad 起不来会让 headless Chromium 直接 SIGTRAP。
 - `Raster` 增加 `read_window_r` / `read_merc_window_r`，可显式指定重采样核（DEM 用 bilinear，分类栅格用 mode）。
 - Rust 单测 21 项全过（新增 terrarium 整米量化两条）。
+
+## 性能：预取与 LOD 切换（2026-10-21 晚）
+
+目标：缩放时不再「松手之后才变清楚」。手段分三层。
+
+### 1. MapLibre 选项（`src/main.ts`）
+| 选项 | 值 | 作用 |
+|---|---|---|
+| `cancelPendingTileRequestsWhileZooming` | **false** | 默认 true 会在放大时把上一级没下完的瓦片全砍掉，细节只能等停了才出现。这是官方文档里针对「缩放结束才出细节」的那一条 |
+| `maxTileCacheZoomLevels` | 8（默认 5） | 跨级别保留瓦片，换级时不必回去重下 |
+| `maxTileCacheSize` | 900 | 每 source 的瓦片缓存上限 |
+| `refreshExpiredTiles` | false | 本地数据不会过期，省掉 revalidate |
+| `fadeDuration` | 120（原 0） | 0 是硬切，换级那一下很扎眼；120ms 只用来盖住切换 |
+
+### 2. 预取（`src/prefetch.ts`）
+空闲时用 PMTiles 客户端（`PMTiles` + `FetchSource`）直接把字节取回来塞进 HTTP 缓存：
+- 栅格（dem / relief）向未来 2 级、向过去 2 级；矢量（osm / contours / hiking）各 1 级。
+  **两个方向都要**——只预取子级的话，缩小时永远比放大卡（父级从来没人提前下）。
+- 每级有 budget，视口铺满整个球时会自动跳过。
+- 触发点：`load` / `idle` / `moveend` / `zoomend`。
+- **`movestart` 时立即暂停**：浏览器对同一 host 只有 6 条 HTTP/1.1 连接，
+  预取一抢就把 MapLibre 真正要用的那几张挤到后面。
+  实测在 `zoom` 里抢瓦片，手势后收敛从 84ms 拖到 164ms，所以撤掉了。
+- `?prefetch=0` 可关掉，方便对比。
+
+### 3. 服务器缓存头
+`vite.config.ts` 与 `scripts/prod-server.mjs` 都对 `/data/`、`/fonts/` 发
+`Cache-Control: public, max-age=3600`。没有这个，预取等于白做（浏览器不会留）。
+重建数据后要立刻生效就强制刷新一次。
+
+### 实测（headless + SwiftShader，1600×900，z9 → z12 easeTo）
+- 手势期间瓦片请求的 **HTTP 缓存命中率：1–2% → 20–25%** —— 预取确实把瓦片提前拿到了。
+- 手势后收敛时间：测量噪声太大（off 67/124/346，on 65/127/892），**没有测出可靠的墙钟改善**。
+  这台机器是 SwiftShader 软件渲染，`areTilesLoaded` 轮询本身也被拖慢，不足以作为结论。
+  真实帧率仍以 780M 实机为准。
+- 缩放方向上的收益是可解释的：缩小时的父级瓦片原来从没被预取过，现在有了。

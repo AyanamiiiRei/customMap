@@ -40,6 +40,11 @@ createServer((req, res) => {
       'Accept-Ranges': 'bytes',
       'Access-Control-Allow-Origin': '*',
     };
+    // 瓦片/字形给长缓存，配合 src/prefetch.ts 的预取；
+    // 重建数据后如果想立刻生效，强制刷新一次即可（或改这里把 max-age 调小）。
+    if (path.includes('/data/') || path.includes('/fonts/')) {
+      headers['Cache-Control'] = 'public, max-age=3600';
+    }
     const range = req.headers.range;
     if (range) {
       const m = range.match(/bytes=(\d+)-(\d*)/);

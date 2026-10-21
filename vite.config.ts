@@ -1,6 +1,22 @@
 import { defineConfig } from 'vite';
 
+// 瓦片与字形加长缓存：prefetch.ts 会提前把 z+1/z+2 的瓦片字节拉进来，
+// 没有 Cache-Control 的话浏览器会反复回源，预取就白做了。
+const cacheHeaders = {
+  name: 'data-cache-headers',
+  configureServer(server: any) {
+    server.middlewares.use((req: any, res: any, next: any) => {
+      const url: string = req.url ?? '';
+      if (url.startsWith('/data/') || url.startsWith('/fonts/')) {
+        res.setHeader('Cache-Control', 'public, max-age=3600');
+      }
+      next();
+    });
+  },
+};
+
 export default defineConfig({
+  plugins: [cacheHeaders],
   server: {
     port: 5271,
     fs: { allow: ['.'] },

@@ -4,8 +4,11 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import styleJson from './style/style.json';
 import { installPanel } from './ui/panel';
 import { installHud } from './ui/hud';
+import { installPrefetch } from './prefetch';
 
 maplibregl.addProtocol('pmtiles', new Protocol().tile);
+// 提前把 worker / 字形等运行时资源建好，避免第一次交互时才初始化
+maplibregl.prewarm();
 
 const DESTINATIONS: Array<{ name: string; center: [number, number]; zoom: number }> = [
   { name: '贡嘎山', center: [101.88, 29.6], zoom: 14 },
@@ -58,8 +61,18 @@ async function main() {
     maxZoom: 18,
     minZoom: 1,
     hash: true,
-    maxTileCacheSize: 800,
-    fadeDuration: 0,
+    // ── 性能：为「缩放时不闪、LOD 在手势内完成切换」服务 ──────────────
+    // 每个 source 的瓦片缓存上限（默认按视口动态估，太小）
+    maxTileCacheSize: 900,
+    // 跨几个 zoom 级别保留瓦片：默认 5，放大时旧级别的瓦片会被过早丢弃
+    maxTileCacheZoomLevels: 8,
+    // 本地数据不会过期，别为了 revalidate 再跑一趟
+    refreshExpiredTiles: false,
+    // 缩放过程中不取消仍在途的旧级别瓦片请求：
+    // 默认 true 会在放大时把上一级没下完的瓦片全砍掉，细节只能等停了才出现
+    cancelPendingTileRequestsWhileZooming: false,
+    // 不留 fade 会硬切（LOD 跳变更扎眼），太长又会糊；120ms 只用来盖住换级那一下
+    fadeDuration: 120,
     attributionControl: { compact: true },
   });
 
@@ -75,6 +88,8 @@ async function main() {
     (window as any).__mapLoaded = true;
   });
   map.on('idle', () => { (window as any).__mapIdle = true; });
+  // 调试/量测用：控制台和 headless 脚本需要拿到 map 实例
+  (window as any).__map = map;
 
   map.on('error', (e) => {
     // PMTiles 404 之类的噪声不刷屏
@@ -83,6 +98,7 @@ async function main() {
 
   installHud(map);
   installPanel(map);
+  installPrefetch(map);
   installDestinations(map);
 }
 
