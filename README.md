@@ -4,10 +4,16 @@
 
 ## 快速开始
 
+**数据不在仓库里**（产物 ~3.6GB，不入 git）。一条命令全自动下载+处理（约 7GB 下载，数小时；幂等可中断续跑）：
+
 ```bash
-# 0. 一键环境: tools/micromamba + rustup(清华镜像) + npm install
-# 1. 安装依赖工具链（见下节）
-# 2. 跑数据管线（按顺序，全部参数化 bbox，默认川西 96,26,105,35）
+bash pipeline/fetch-all.sh            # 默认川西 bbox 96,26,105,35；换区域传参即可
+npm install && npm run dev            # http://localhost:5271
+```
+
+<details><summary>分步执行（排障/自定义时）</summary>
+
+```bash
 bash pipeline/00-fetch-osm.sh        # 下载并裁切 OSM（~1.7GB 下载）
 bash pipeline/01-fetch-dem.sh        # 下载 Copernicus DEM 81 片（~4GB，8 并发断点续传）
 bash pipeline/02-fetch-worldcover.sh # 下载 ESA WorldCover 12 片（~1.2GB）
@@ -28,6 +34,8 @@ pnpm install
 pnpm dev      # 开发（Vite，端口 5271，支持 Range，PMTiles 可用）
 pnpm serve    # 生产验证（vite build + node scripts/prod-server.mjs，端口 5272）
 ```
+
+</details>
 
 打开 http://localhost:5271 —— 3 秒内应看到地球。
 （5173 被本机其他项目占用，故改用 5271/5272；`npx serve` 实测不跟随指向 dist 外的符号链接，
