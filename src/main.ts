@@ -51,7 +51,8 @@ async function main() {
     container: 'map',
     style,
     center: [101.8, 31.0],
-    zoom: 4.2,
+    // 先给一个能看到球体的初始视角，再往里推
+    zoom: 2.6,
     pitch: 0,
     maxPitch: 85,
     maxZoom: 18,

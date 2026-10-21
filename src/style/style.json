@@ -92,7 +92,7 @@
       "source-layer": "land",
       "maxzoom": 8,
       "paint": {
-        "fill-color": "#C9C4A8"
+        "fill-color": "#C6C9AE"
       }
     },
     {
@@ -126,22 +126,6 @@
           6,
           1.5
         ]
-      }
-    },
-    {
-      "id": "hillshade",
-      "type": "hillshade",
-      "source": "dem",
-      "minzoom": 5,
-      "layout": {
-        "visibility": "visible"
-      },
-      "paint": {
-        "hillshade-method": "multidirectional",
-        "hillshade-exaggeration": 0.45,
-        "hillshade-shadow-color": "#3a4a3a",
-        "hillshade-highlight-color": "#ffffff",
-        "hillshade-accent-color": "#5a6b5a"
       }
     },
     {
@@ -244,7 +228,7 @@
       "source-layer": "contours",
       "minzoom": 11,
       "paint": {
-        "line-color": "#B49A7A",
+        "line-color": "#A8916F",
         "line-width": [
           "case",
           [
@@ -266,8 +250,8 @@
               "idx"
             ]
           ],
-          0.6,
-          0.35
+          0.75,
+          0.45
         ]
       }
     },
@@ -606,7 +590,7 @@
       "type": "symbol",
       "source": "osm",
       "source-layer": "place",
-      "minzoom": 11,
+      "minzoom": 12,
       "filter": [
         "==",
         [
@@ -654,7 +638,7 @@
       "type": "symbol",
       "source": "osm",
       "source-layer": "place",
-      "minzoom": 8,
+      "minzoom": 10,
       "filter": [
         "==",
         [

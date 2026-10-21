@@ -3,15 +3,17 @@
 use anyhow::Result;
 use image::ImageEncoder;
 
-/// Terrarium: v = elev + 32768; R = floor(v/256), G = floor(v) mod 256,
-/// B = floor(frac(v) * 256). elev is clamped to [-500, 9000] first.
+/// Terrarium: v = elev + 32768; R = v >> 8, G = v & 255, B = 0.
+///
+/// Elevation is quantised to whole metres. The classic terrarium layout puts
+/// the fractional metre in B, which makes that channel pure noise: PNG cannot
+/// compress it and tiles come out ~3x larger (~145 KB instead of ~50 KB for a
+/// 256x256 tile). One-metre precision is still ~38x finer than a z12 tile
+/// pixel, so the extra byte buys nothing a terrain renderer can use.
+/// `terrarium_decode` accepts both layouts (B = 0 here).
 pub fn terrarium_encode(elev: f64) -> [u8; 3] {
-    let e = elev.clamp(-500.0, 9000.0);
-    let v = e + 32768.0;
-    let r = (v / 256.0).floor();
-    let g = v.floor() as i64 % 256;
-    let b = ((v - v.floor()) * 256.0).floor();
-    [r as u8, g as u8, b as u8]
+    let v = elev.clamp(-500.0, 9000.0).round() as i64 + 32768;
+    [(v >> 8) as u8, (v & 0xff) as u8, 0]
 }
 
 pub fn terrarium_decode(rgb: [u8; 3]) -> f64 {
@@ -32,9 +34,17 @@ mod tests {
 
     #[test]
     fn terrarium_roundtrip() {
+        // Quantised to whole metres, so the error bound is half a metre.
         for &e in &[-500.0, -10.5, 0.0, 1.0, 100.25, 8848.86, 7556.0, 9000.0] {
             let d = terrarium_decode(terrarium_encode(e));
-            assert!((d - e).abs() < 1.0 / 256.0 + 1e-9, "e={e} d={d}");
+            assert!((d - e).abs() <= 0.5 + 1e-9, "e={e} d={d}");
+        }
+    }
+
+    #[test]
+    fn terrarium_blue_channel_is_constant() {
+        for e in [-500.0, -3.7, 0.4, 1234.56, 8999.0] {
+            assert_eq!(terrarium_encode(e)[2], 0, "B must stay 0 for compressibility");
         }
     }
 

@@ -15,7 +15,8 @@ const exe = process.env.CHROME_PATH ||
 
 const browser = await chromium.launch({
   executablePath: exe,
-  args: ['--enable-unsafe-swiftshader', '--use-gl=angle', '--use-angle=swiftshader'],
+  // --disable-crash-reporter: 沙箱内 crashpad 起不来会 SIGTRAP，必须关掉
+  args: ['--disable-crash-reporter', '--enable-unsafe-swiftshader', '--use-gl=angle', '--use-angle=swiftshader'],
 });
 const page = await browser.newPage({ viewport: { width: 1600, height: 900 } });
 const errors = [];

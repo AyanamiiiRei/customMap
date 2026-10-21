@@ -17,3 +17,11 @@ data/sources/
 rust/geotiles/target/
 *.tif_*
 tools/gen-glyphs/package*.json
+.npm-cache/
+tools/cargo/
+tools/rustup/
+tools/pw-browsers/
+tools/pkgs/
+tools/.cache/
+tools/mamba-root/
+tools/fakehome/

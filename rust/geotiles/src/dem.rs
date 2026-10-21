@@ -86,6 +86,21 @@ impl Raster {
         h: usize,
         out: Option<(usize, usize)>,
     ) -> Result<(Vec<f32>, usize, usize)> {
+        self.read_window_r(x0, y0, w, h, out, "bilinear")
+    }
+
+    /// Like [`Raster::read_window`] but with an explicit GDAL resampling kernel.
+    /// Categorical rasters (land-cover class codes) MUST use `"near"`: averaging
+    /// neighbouring class ids yields values that map to no class at all.
+    pub fn read_window_r(
+        &self,
+        x0: i64,
+        y0: i64,
+        w: usize,
+        h: usize,
+        out: Option<(usize, usize)>,
+        resampling: &str,
+    ) -> Result<(Vec<f32>, usize, usize)> {
         let id = TMP_COUNTER.fetch_add(1, Ordering::Relaxed);
         let base = std::env::temp_dir().join(format!(
             "geotiles_{}_{}_{}",
@@ -106,7 +121,7 @@ impl Raster {
             .arg(w.to_string())
             .arg(h.to_string());
         if let Some((ow, oh)) = out {
-            cmd.arg("-r").arg("bilinear")
+            cmd.arg("-r").arg(resampling)
                 .arg("-outsize")
                 .arg(ow.to_string())
                 .arg(oh.to_string());
@@ -157,6 +172,20 @@ impl Raster {
         maxy: f64,
         target_res: f64,
     ) -> Result<Window> {
+        self.read_merc_window_r(minx, miny, maxx, maxy, target_res, "bilinear")
+    }
+
+    /// [`Raster::read_merc_window`] with an explicit resampling kernel
+    /// (`"near"` for categorical rasters).
+    pub fn read_merc_window_r(
+        &self,
+        minx: f64,
+        miny: f64,
+        maxx: f64,
+        maxy: f64,
+        target_res: f64,
+        resampling: &str,
+    ) -> Result<Window> {
         let native = self.gt[1].abs();
         let res = target_res.max(native);
         let out_w = ((maxx - minx) / res).ceil().max(1.0) as usize;
@@ -189,9 +218,9 @@ impl Raster {
         let (data, ow, oh) = if need_resample {
             let ow = (win_w_m / res).ceil().max(1.0) as usize;
             let oh = (win_h_m / res).ceil().max(1.0) as usize;
-            self.read_window(sx0, sy0, sw, sh, Some((ow, oh)))?
+            self.read_window_r(sx0, sy0, sw, sh, Some((ow, oh)), resampling)?
         } else {
-            self.read_window(sx0, sy0, sw, sh, None)?
+            self.read_window_r(sx0, sy0, sw, sh, None, resampling)?
         };
         Ok(Window {
             w: ow,

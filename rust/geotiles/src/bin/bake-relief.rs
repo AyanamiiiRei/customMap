@@ -38,6 +38,10 @@ fn main() -> Result<()> {
     }
 
     let dem = Raster::open(&dem_path).context("open DEM")?;
+    // Pixels outside the DEM extent are rendered transparent, otherwise the
+    // partial tiles along the bbox edge paint an opaque band of fallback colour
+    // over the world basemap.
+    let (ext_minx, ext_miny, ext_maxx, ext_maxy) = dem.extent();
     let lc = Raster::open(&lc_path).context("open landcover")?;
     let (rminx, rminy, rmaxx, rmaxy) = dem.extent();
     let (minlon, maxlat) = tile::meters_to_lonlat(rminx, rmaxy);
@@ -65,7 +69,15 @@ fn main() -> Result<()> {
                     let (tminx, tminy, tmaxx, tmaxy) = tile::tile_bounds_meters(z, x, y);
                     let pad = BUF as f64 * res;
                     let dwin = dem.read_merc_window(tminx - pad, tminy - pad, tmaxx + pad, tmaxy + pad, res)?;
-                    let lwin = lc.read_merc_window(tminx - pad, tminy - pad, tmaxx + pad, tmaxy + pad, res)?;
+                    // Categorical raster: modal resampling. Bilinear would average
+                    // class ids into values that match no class; nearest just picks
+                    // one 10 m pixel per output cell, which at low zoom aliases into
+                    // a mottled forest/grassland mosaic. GDAL's "mode" kernel picks
+                    // the dominant class in each cell, which is what a land-cover
+                    // map is supposed to show.
+                    let lwin = lc.read_merc_window_r(
+                        tminx - pad, tminy - pad, tmaxx + pad, tmaxy + pad, res, "mode",
+                    )?;
 
                     // Sample both rasters onto the buffered tile grid.
                     let mut elev = vec![0f64; WIN * WIN];
@@ -86,10 +98,59 @@ fn main() -> Result<()> {
                         }
                     }
 
+                    // 3x3 majority vote on the categorical class map. Nearest
+                    // sampling keeps isolated high-slope (bare-rock) pixels,
+                    // which otherwise speckle the forest with warm-grey dots.
+                    {
+                        let src_c = class.clone();
+                        let src_k = known.clone();
+                        for j in 0..WIN {
+                            for i in 0..WIN {
+                                let mut counts: [(u8, u8); 9] = [(0, 0); 9];
+                                let mut n = 0usize;
+                                for dj in -1i32..=1 {
+                                    for di in -1i32..=1 {
+                                        let jj = (j as i32 + dj).clamp(0, WIN as i32 - 1) as usize;
+                                        let ii = (i as i32 + di).clamp(0, WIN as i32 - 1) as usize;
+                                        let k = jj * WIN + ii;
+                                        if !src_k[k] {
+                                            continue;
+                                        }
+                                        let c = src_c[k];
+                                        let mut hit = false;
+                                        for e in counts.iter_mut().take(n) {
+                                            if e.0 == c {
+                                                e.1 += 1;
+                                                hit = true;
+                                                break;
+                                            }
+                                        }
+                                        if !hit && n < 9 {
+                                            counts[n] = (c, 1);
+                                            n += 1;
+                                        }
+                                    }
+                                }
+                                if n > 0 {
+                                    let mut best = counts[0];
+                                    for e in counts.iter().take(n) {
+                                        if e.1 > best.1 {
+                                            best = *e;
+                                        }
+                                    }
+                                    let centre = j * WIN + i;
+                                    if src_k[centre] {
+                                        class[centre] = best.0;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     let (gx, gy) = shade::horn_gradients(&elev, WIN, WIN, res);
                     let mean11 = shade::box_mean_11(&elev, WIN, WIN);
 
-                    let mut rgb = vec![0u8; 256 * 256 * 3];
+                    let mut rgb = vec![0u8; 256 * 256 * 4];
                     for v in 0..256usize {
                         for u in 0..256usize {
                             let i = u + BUF;
@@ -114,12 +175,12 @@ fn main() -> Result<()> {
                                 base = [base[0] * f, base[1] * f, base[2] * f];
                             }
 
-                            base = landcover::mix(base, hypso, 0.35);
+                            base = landcover::mix(base, hypso, landcover::hypsometric_weight(e));
                             let s = shade::hillshade_multi(gx[idx], gy[idx]);
                             base = [
-                                base[0] * (0.55 + 0.45 * s),
-                                base[1] * (0.55 + 0.45 * s),
-                                base[2] * (0.55 + 0.45 * s),
+                                base[0] * (0.50 + 0.50 * s),
+                                base[1] * (0.50 + 0.50 * s),
+                                base[2] * (0.50 + 0.50 * s),
                             ];
                             let conc = ((mean11[idx] - e) / 60.0).clamp(-1.0, 1.0);
                             base = [
@@ -131,21 +192,33 @@ fn main() -> Result<()> {
                             let ngy = (y as usize * 256 + v) as f64;
                             let n = shade::noise_fractal(ngx, ngy);
                             base = [
-                                base[0] * (1.0 + 0.12 * n),
-                                base[1] * (1.0 + 0.12 * n),
-                                base[2] * (1.0 + 0.12 * n),
+                                base[0] * (1.0 + 0.09 * n),
+                                base[1] * (1.0 + 0.09 * n),
+                                base[2] * (1.0 + 0.09 * n),
                             ];
-                            let c = landcover::desaturate(base, 0.1);
-                            let o = (v * 256 + u) * 3;
+                            let c = landcover::desaturate(base, 0.06);
+                            let mx = tminx + (u as f64 + 0.5) * res;
+                            let my = tmaxy - (v as f64 + 0.5) * res;
+                            let inside = mx >= ext_minx && mx <= ext_maxx
+                                && my >= ext_miny && my <= ext_maxy;
+                            let o = (v * 256 + u) * 4;
                             rgb[o] = c[0].round().clamp(0.0, 255.0) as u8;
                             rgb[o + 1] = c[1].round().clamp(0.0, 255.0) as u8;
                             rgb[o + 2] = c[2].round().clamp(0.0, 255.0) as u8;
+                            rgb[o + 3] = if inside { 255 } else { 0 };
                         }
                     }
                     let img = match format {
-                        "png" => encode_png_rgb(&rgb, 256, 256)?,
-                        _ => webp::Encoder::from_rgb(&rgb, 256, 256)
-                            .encode(85.0)
+                        "png" => {
+                            // drop alpha for the debug PNG path
+                            let mut out = Vec::with_capacity(256 * 256 * 3);
+                            for px in rgb.chunks_exact(4) {
+                                out.extend_from_slice(&px[..3]);
+                            }
+                            encode_png_rgb(&out, 256, 256)?
+                        }
+                        _ => webp::Encoder::from_rgba(&rgb, 256, 256)
+                            .encode(88.0)
                             .to_vec(),
                     };
                     let n = done.fetch_add(1, Ordering::Relaxed) + 1;
