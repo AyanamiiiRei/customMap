@@ -56,6 +56,64 @@ export function preventTerrainGestureSnap(map: maplibregl.Map) {
 const BEARING_PER_PX = 0.45;
 const PITCH_PER_PX = 0.45;
 
+/** 双击后按住拖动 = 抓点旋转（谷歌地球那样，不用按修饰键） */
+const DOUBLE_PRESS_MS = 450;
+const DOUBLE_PRESS_PX = 16;
+
+let forcedRotate = false;
+let pressCandidate = false;
+let pressMoved = false;
+let downX = 0;
+let downY = 0;
+let lastUpAt = 0;
+let lastUpX = 0;
+let lastUpY = 0;
+let lastWasDrag = true;
+let suppressDblUntil = 0;
+
+/**
+ * 监听窗口捕获阶段的 mouse 事件，判断这次按下是不是「连续点击的第二下」。
+ * 必须在 MapLibre 的 mousedown 之前跑，它的 handler 才会看到 updated 的标志。
+ */
+function watchDoublePress() {
+  window.addEventListener('mousedown', (ev) => {
+    if (ev.button !== 0) return;
+    const now = performance.now();
+    const near = Math.hypot(ev.clientX - lastUpX, ev.clientY - lastUpY) < DOUBLE_PRESS_PX;
+    // 上一手必须是「点击」而不是拖动，否则连续两次快速平移会被误判成旋转
+    forcedRotate = now - lastUpAt < DOUBLE_PRESS_MS && near && !lastWasDrag;
+    pressCandidate = forcedRotate;
+    pressMoved = false;
+    downX = ev.clientX;
+    downY = ev.clientY;
+  }, true);
+
+  window.addEventListener('mousemove', (ev) => {
+    if (!pressCandidate || !(ev.buttons & 1)) return;
+    if (Math.hypot(ev.clientX - downX, ev.clientY - downY) > 4) pressMoved = true;
+  }, true);
+
+  window.addEventListener('mouseup', (ev) => {
+    if (ev.button !== 0) return;
+    lastUpAt = performance.now();
+    lastUpX = ev.clientX;
+    lastUpY = ev.clientY;
+    if (pressCandidate && pressMoved) suppressDblUntil = lastUpAt + 700;
+    lastWasDrag = pressMoved;
+    forcedRotate = false;
+    pressCandidate = false;
+    pressMoved = false;
+  }, true);
+
+  // 抓点旋转拖过之后，浏览器仍会补一个 dblclick，把它吃掉，否则会跟着放大
+  window.addEventListener('dblclick', (ev) => {
+    if (performance.now() < suppressDblUntil) {
+      ev.preventDefault();
+      ev.stopPropagation();
+    }
+  }, true);
+}
+
 function clamp(v: number, a: number, b: number) {
   return Math.min(b, Math.max(a, v));
 }
@@ -76,12 +134,14 @@ function patchHandlers(map: maplibregl.Map) {
     }
   };
   patch((map as any).dragRotate, (e) =>
-    (e.button === 0 && (e.ctrlKey || (e.shiftKey && !e.altKey))) || (e.button === 2 && !e.ctrlKey));
+    (e.button === 0 && (forcedRotate || (e.ctrlKey || (e.shiftKey && !e.altKey)))) ||
+    (e.button === 2 && !e.ctrlKey));
   patch((map as any).dragPan, (e) =>
-    e.button === 0 && !e.shiftKey && !e.ctrlKey && !e.altKey);
+    e.button === 0 && !forcedRotate && !e.shiftKey && !e.ctrlKey && !e.altKey);
 }
 
 export function installGestures(map: maplibregl.Map) {
+  watchDoublePress();
   preventTerrainGestureSnap(map);
   patchHandlers(map);
   installAltRotate(map);
