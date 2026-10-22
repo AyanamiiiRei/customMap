@@ -263,3 +263,33 @@ HUD 增加「视角」一行。MapLibre 6 的 `Map` 没有公开 `getCameraAltit
 但 MapLibre 自己的 `_keepCameraAboveTerrain` 会把它抬起来，画面不会穿模
 （实测从 4260m 区域平移到 6880m 的贡嘎主峰，视野正常，只是 HUD 的「视角」会
 显示被抬高后的真实值）。
+
+## 地点搜索（⌘K）（2026-10-22）
+
+**索引**：`pipeline/11-search.sh` + `pipeline/11-search-index.py`
+- `osmium tags-filter` → `osmium export -f geojsonseq` → python
+- 抽取：place(city/town/village/hamlet/suburb/…)、natural=peak/saddle、mountain_pass、
+  tourism=alpine_hut/wilderness_hut/camp_site/viewpoint、natural=water（含 multipolygon 关系）、
+  waterway=river、highway=motorway/trunk/primary/secondary/path/track/footway
+- **坑 1**：湖泊大多是 multipolygon 关系，只过滤 `w/natural=water` 会漏掉（泸沽湖就漏了），
+  必须加 `r/natural=water`。
+- **坑 2**：道路/河流是线状要素，一条国道在 OSM 里是上百个 way，
+  按「名称+坐标」去重会刷出 4.8 万条；改成线状要素按**名称**去重后降到 4,805。
+- **坑 3**：`osmium export` **不会导出 route=hiking 关系**，所以步道只能靠命名的
+  `highway=path/track/footway` way 来补（539 条）。
+- 结果：46,346 条 / 39,905 个名称 / **2.65 MB**，缓存到 `public/data/search.json`（已入库）。
+- 拼音用 `pypinyin`（conda-forge 装了），生成全拼 + 首字母；没装则自动降级。
+
+**前端**：`src/ui/search.ts`
+- ⌘K / Ctrl+K / `/` / 右上放大镜 → 命令面板；输入框 + 结果列表 + 快捷键提示
+- 惰性加载：首屏 0 请求，第一次打开面板才 fetch（实测 beforeOpen=0 / afterOpen=1）
+- 打分：名称完全相等 1000 > 前缀 820 > 子串 620 > 拼音全等 700 > 首字母 680 >
+  拼音前缀 520 > 首字母前缀 500 > 拼音子串 380，再 + 类别权重 - 距离惩罚（min 70）
+- 单字符只做前缀匹配，避免「贡」这种命中上万条
+- 类型 → 跳转：城市 z11 / 镇 z12 / 村 z13.5 / 山峰 z15.5 pitch55 / 山屋 z16 …
+- 选中后落一枚脉冲 pin + 气泡（名称 / 类别 / 海拔），最近 5 条存 localStorage
+- IME：composition 期间不触发搜索、不响应 Enter
+- `map.movestart` 时自动收面板，避免挡住拖动
+
+**测试**：`tests/check-search.mjs` —— 结构校验 + bbox + 索引越界 + 体积上限 +
+抽查（贡嘎山/幺妹峰/稻城县/泸沽湖 的类型与坐标误差）。

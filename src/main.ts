@@ -6,18 +6,12 @@ import styleJson from './style/style.json';
 import { installPanel } from './ui/panel';
 import { installHud } from './ui/hud';
 import { installPrefetch } from './prefetch';
+import { installSearch } from './ui/search';
+import { DESTINATIONS, HOME_VIEW } from './destinations';
 
 maplibregl.addProtocol('pmtiles', new Protocol().tile);
 // 提前把 worker / 字形等运行时资源建好，避免第一次交互时才初始化
 maplibregl.prewarm();
-
-const HOME = { center: [101.8, 31.0] as [number, number], zoom: 2.6 };
-
-const DESTINATIONS: Array<{ name: string; sub: string; center: [number, number]; zoom: number }> = [
-  { name: '贡嘎山', sub: '7556 m', center: [101.88, 29.6], zoom: 14 },
-  { name: '四姑娘山', sub: '6250 m', center: [102.9, 31.1], zoom: 14 },
-  { name: '稻城亚丁', sub: '6032 m', center: [100.3, 28.45], zoom: 14 },
-];
 
 const PIN_ICON =
   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" ' +
@@ -111,6 +105,7 @@ async function main() {
   installPanel(map);
   installPrefetch(map);
   installDestinations(map);
+  installSearch(map);
 }
 
 function installDestinations(map: maplibregl.Map) {
@@ -127,7 +122,7 @@ function installDestinations(map: maplibregl.Map) {
   }
 
   document.getElementById('homeBtn')!.addEventListener('click', () => {
-    map.flyTo({ ...HOME, pitch: 0, bearing: 0, duration: 1800 });
+    map.flyTo({ ...HOME_VIEW, pitch: 0, bearing: 0, duration: 1800 });
   });
 }
 

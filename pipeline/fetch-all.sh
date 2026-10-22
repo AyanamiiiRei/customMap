@@ -70,6 +70,9 @@ step "12. 中文字形"
 bash pipeline/08-glyphs.sh
 
 # ── 6. 校验 ────────────────────────────────────────────────────
+step "12a. 搜索索引（OSM → search.json）"
+bash pipeline/11-search.sh
+
 step "12b. 全球粗底（ETOPO，z0-7）"
 bash pipeline/10-world-relief.sh
 
