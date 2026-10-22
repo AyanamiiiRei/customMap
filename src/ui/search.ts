@@ -19,22 +19,25 @@ interface Entry {
   pyi: string;
 }
 
-/** 类型 → 跳转参数 */
-const FLY: Record<string, { zoom: number; pitch: number }> = {
-  city: { zoom: 11, pitch: 0 },
-  town: { zoom: 12, pitch: 0 },
-  village: { zoom: 13.5, pitch: 0 },
-  hamlet: { zoom: 14.5, pitch: 0 },
-  district: { zoom: 15, pitch: 0 },
-  peak: { zoom: 15.5, pitch: 55 },
-  saddle: { zoom: 15.5, pitch: 55 },
-  hut: { zoom: 16, pitch: 55 },
-  camp: { zoom: 15.5, pitch: 55 },
-  viewpoint: { zoom: 16, pitch: 55 },
-  lake: { zoom: 13, pitch: 30 },
-  river: { zoom: 13, pitch: 0 },
-  trail: { zoom: 13, pitch: 30 },
-  road: { zoom: 12, pitch: 0 },
+/** 搜索结果的落点缩放：统一 z13（再近就只剩一片坡了） */
+const SEARCH_ZOOM = 13;
+
+/** 类型 → 落点俯角（山峰/营地这些给点立体感，村镇保持平视） */
+const PITCH: Record<string, number> = {
+  city: 0,
+  town: 0,
+  village: 0,
+  hamlet: 0,
+  district: 0,
+  peak: 55,
+  saddle: 55,
+  hut: 55,
+  camp: 55,
+  viewpoint: 55,
+  lake: 30,
+  river: 0,
+  trail: 30,
+  road: 0,
 };
 
 const TYPE_LABEL: Record<string, string> = {
@@ -328,8 +331,12 @@ export function installSearch(map: maplibregl.Map) {
       .addTo(map);
     marker.togglePopup();
 
-    const f = FLY[e.type] ?? { zoom: 14, pitch: 0 };
-    map.flyTo({ center: [e.lon, e.lat], zoom: f.zoom, pitch: f.pitch, duration: 1800 });
+    map.flyTo({
+      center: [e.lon, e.lat],
+      zoom: SEARCH_ZOOM,
+      pitch: PITCH[e.type] ?? 0,
+      duration: 1800,
+    });
   }
 
   // ── 开关 ──────────────────────────────────────────────────
