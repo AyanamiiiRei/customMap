@@ -927,3 +927,182 @@ kbd {
   border-top-color: var(--panel-solid) !important;
   border-bottom-color: var(--panel-solid) !important;
 }
+
+/* ── 右下角视图控件（视角旋钮 + 缩放 + 全屏） ───────────── */
+.ctrl-cluster {
+  position: absolute;
+  right: 14px;
+  bottom: 62px;
+  z-index: 16;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 9px;
+}
+
+.view-knob {
+  position: relative;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  cursor: grab;
+  touch-action: none;
+  outline: none;
+  filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.45));
+}
+.view-knob:active,
+.view-knob.active {
+  cursor: grabbing;
+}
+.view-knob:focus-visible {
+  box-shadow: 0 0 0 2px rgba(242, 166, 90, 0.7);
+}
+.knob-ring {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.ring-bg {
+  fill: rgba(12, 16, 21, 0.78);
+  stroke: rgba(255, 255, 255, 0.1);
+  stroke-width: 1;
+  backdrop-filter: blur(18px);
+}
+.ring-pitch {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  opacity: 0.95;
+  transition: stroke-dasharray 0.05s linear;
+}
+.tick {
+  stroke: rgba(255, 255, 255, 0.34);
+  stroke-width: 1.3;
+  stroke-linecap: round;
+}
+.tick.major {
+  stroke: rgba(255, 255, 255, 0.72);
+  stroke-width: 1.7;
+}
+.knob-needle {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  transition: transform 0.06s linear;
+}
+.knob-needle svg {
+  width: 14px;
+  height: 30px;
+  overflow: visible;
+}
+.needle-n {
+  fill: var(--accent);
+  opacity: 0.95;
+}
+.needle-s {
+  fill: rgba(255, 255, 255, 0.32);
+}
+.view-knob.active .needle-n,
+.view-knob:hover .needle-n {
+  fill: #ffbe7a;
+}
+
+.knob-readout {
+  position: absolute;
+  right: 62px;
+  top: 10px;
+  padding: 5px 9px;
+  border-radius: 8px;
+  background: var(--panel-solid);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  font-size: 11px;
+  color: var(--ink);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  opacity: 0;
+  transform: translateX(6px);
+  transition: opacity 0.15s var(--ease), transform 0.15s var(--ease);
+  pointer-events: none;
+}
+.knob-readout.on {
+  opacity: 1;
+  transform: none;
+}
+
+.ctrl-stack {
+  width: 52px;
+  display: flex;
+  flex-direction: column;
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+}
+.ctrl-btn {
+  width: 100%;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  border: 0;
+  color: var(--ink);
+  cursor: pointer;
+  transition: background 0.14s var(--ease), color 0.14s var(--ease);
+}
+.ctrl-btn + .ctrl-btn {
+  border-top: 1px solid var(--line);
+}
+.ctrl-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--accent);
+}
+.ctrl-btn:active {
+  background: rgba(255, 255, 255, 0.14);
+}
+.ctrl-btn svg {
+  width: 19px;
+  height: 19px;
+}
+
+/* Alt/Ctrl 旋转时的抓取光标 */
+body.alt-rotating,
+body.alt-rotating .maplibregl-canvas {
+  cursor: grabbing !important;
+  user-select: none;
+}
+
+@media (max-width: 720px) {
+  .ctrl-cluster {
+    right: 10px;
+    bottom: 74px;
+    gap: 7px;
+  }
+  .view-knob {
+    width: 46px;
+    height: 46px;
+  }
+  .ctrl-stack {
+    width: 46px;
+  }
+  .ctrl-btn {
+    height: 38px;
+  }
+  .knob-readout {
+    right: 54px;
+  }
+}
+
+@media (max-width: 720px) {
+  /* 窄屏下署名会换成两行，比例尺挤在一起，干脆收起来 */
+  .maplibregl-ctrl-scale {
+    display: none;
+  }
+}

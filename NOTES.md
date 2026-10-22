@@ -293,3 +293,45 @@ HUD 增加「视角」一行。MapLibre 6 的 `Map` 没有公开 `getCameraAltit
 
 **测试**：`tests/check-search.mjs` —— 结构校验 + bbox + 索引越界 + 体积上限 +
 抽查（贡嘎山/幺妹峰/稻城县/泸沽湖 的类型与坐标误差）。
+
+## 视角旋钮 + 拖动改绑（2026-10-22）
+
+### 旋钮
+MapLibre 自带的 `NavigationControl` 又小又偏，换成 `src/ui/viewknob.ts` 自己画的：
+- 52px 圆形旋钮，外圈刻度 + 橙色指北针 + 外环弧线表示俯角（0~85°）
+- 横向拖 = 转方位角（0.42°/px），纵向拖 = 调俯角（0.36°/px）
+- **单击 = 回正**（正北 + 水平）；拖动时旁边浮出「东北 27° · 俯角 14°」
+- 聚焦后方向键微调（Shift 加速），Enter/空格回正
+- 下面接同宽的 +/− 缩放和全屏，整列统一 52px，不再七扭八歪
+- 比例尺从左下挪回来（右下让给旋钮）；窄屏下直接隐藏比例尺，免得和两行署名打架
+
+### 拖动绑定（关键坑）
+MapLibre **6.15 已经把旋转绑到 Ctrl+左键 / 右键**，Shift+左键变成了框选缩放——
+所以「Shift 拖动」在原来的代码里根本不是旋转。
+`dragRotate: { around: 'pointer' }` 是官方自带的 pointer 锚点模式
+（「抓住指针下的地形点旋转，该点留在屏幕原位」），但它的触发键写死在
+内部 `moveStateManager._correctEvent` 里：`button===0 && ctrlKey || button===2`。
+
+处理（`src/ui/gestures.ts`）：
+```js
+patch(dragRotate, e => (e.button===0 && (e.ctrlKey || (e.shiftKey && !e.altKey))) || (e.button===2 && !e.ctrlKey));
+patch(dragPan,   e => e.button===0 && !e.shiftKey && !e.ctrlKey && !e.altKey);
+```
+- **Shift + 左键** → 抓点旋转（走官方 pointer 模式，带地形高程）
+- **Alt / Ctrl + 左键** → 绕屏幕中心旋转（自己实现，0.45°/px）；Linux 上 Alt+拖动
+  常被窗口管理器抢走，所以 Ctrl 也接受
+- 同时 `boxZoom: false`，把 Shift 让出来
+- 内部字段拿不到时静默跳过，最坏退化回默认绑定
+
+实测：
+| 操作 | 方位 | 中心 |
+|---|---|---|
+| Shift 拖 200px | 0° → 160° | 变（pointer 模式）|
+| 抓取点屏幕漂移 | — | **< 1px** |
+| Alt 拖 200px | 0° → 90° | 不变（center 模式）|
+| 无修饰键拖 | 不变 | 变（平移）|
+
+### 未解决
+bearing ≠ 0 时，地形 drape 的 **relief 栅格**会出现绿色竖向条纹 + 少量黑色碎片
+（`terrain` 开、`relief` 层隐藏后消失）。在 SwiftShader 下稳定复现，
+关掉各向异性过滤无效。怀疑是 MapLibre 旋转后 RTT 贴图变换的问题，需要真机确认。

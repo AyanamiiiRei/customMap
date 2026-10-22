@@ -7,6 +7,8 @@ import { installPanel } from './ui/panel';
 import { installHud } from './ui/hud';
 import { installPrefetch } from './prefetch';
 import { installSearch } from './ui/search';
+import { installViewControls } from './ui/viewknob';
+import { installGestures } from './ui/gestures';
 import { DESTINATIONS, HOME_VIEW } from './destinations';
 
 maplibregl.addProtocol('pmtiles', new Protocol().tile);
@@ -76,12 +78,16 @@ async function main() {
     // 0：不做淡入。120ms 的 alpha 动画在大量瓦片同时进出时会被看成「闪」，
     // 而地形 drape 本身每帧都在重画，淡入反而是噪点。
     fadeDuration: 0,
+    // Shift + 左键 = 抓住指针下的那个点旋转地球（该点钉在屏幕上不动），
+    // 而不是绕屏幕中心转视角。MapLibre 自带 pointer 模式，还会跟地形算高程。
+    // Alt + 左键的绕中心旋转在 src/ui/gestures.ts 里自己接。
+    dragRotate: { around: 'pointer' },
+    // Shift 被拿去做「抓点旋转」，框选缩放让路
+    boxZoom: false,
     attributionControl: { compact: true },
   });
 
-  map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'bottom-right');
-  map.addControl(new maplibregl.ScaleControl({ unit: 'metric', maxWidth: 92 }), 'bottom-right');
-  map.addControl(new maplibregl.FullscreenControl(), 'bottom-right');
+  map.addControl(new maplibregl.ScaleControl({ unit: 'metric', maxWidth: 92 }), 'bottom-left');
 
   map.on('load', () => {
     if (map.getSource('dem')) {
@@ -106,6 +112,8 @@ async function main() {
   installPrefetch(map);
   installDestinations(map);
   installSearch(map);
+  installViewControls(map);
+  installGestures(map);
 }
 
 function installDestinations(map: maplibregl.Map) {
