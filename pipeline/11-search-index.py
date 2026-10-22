@@ -26,6 +26,7 @@ TYPES = [
     "city", "town", "village", "hamlet", "district",
     "peak", "saddle", "hut", "camp", "viewpoint",
     "lake", "river", "trail", "road",
+    "heritage", "worship", "attraction", "reserve", "reservoir", "station", "airport",
 ]
 TYPE_IDX = {t: i for i, t in enumerate(TYPES)}
 
@@ -95,6 +96,28 @@ def classify(props: dict) -> str | None:
     route = props.get("route")
     if route in ("hiking", "foot", "mtb"):
         return "trail"
+    if props.get("landuse") == "religious" or props.get("amenity") in ("university", "college"):
+        return "worship"
+    if props.get("historic"):
+        return "heritage"
+    if props.get("tourism") in ("museum", "gallery", "artwork", "zoo", "theme_park"):
+        return "heritage"
+    if props.get("amenity") == "place_of_worship":
+        return "worship"
+    if props.get("building") in ("monastery", "temple", "church", "cathedral", "chapel", "shrine"):
+        return "worship"
+    if props.get("tourism") in ("attraction", "information"):
+        return "attraction"
+    if props.get("leisure") in ("nature_reserve", "park", "garden"):
+        return "reserve"
+    if props.get("boundary") in ("protected_area", "national_park"):
+        return "reserve"
+    if props.get("water") == "reservoir" or props.get("landuse") == "reservoir":
+        return "reservoir"
+    if props.get("railway") in ("station", "halt", "tram_stop"):
+        return "station"
+    if props.get("aeroway") == "aerodrome":
+        return "airport"
     if props.get("natural") == "water":
         return "lake"
     if props.get("waterway") == "river":

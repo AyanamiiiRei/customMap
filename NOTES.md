@@ -447,3 +447,28 @@ v6 里有两个闸口会读这个方法，必须都遮：
 
 顺序放在 `boundary` 之后、`road-casing` 之前——公路压在铁路上，
 道口看起来才对。面板新增「铁路」分组，可单独开关。
+
+## 搜索索引补上景区 / 文化古迹 / 车站机场 / 水库（2026-10-22）
+
+按之前的评估落地，`11-search.sh` 的抽取条件加上：
+
+```
+nw/historic  nw/tourism=museum,attraction,gallery,artwork,zoo,theme_park,information
+nw/amenity=place_of_worship,university,college
+nw/building=monastery,temple,church,cathedral,chapel,shrine
+nw/landuse=religious
+nw/leisure=nature_reserve,park,garden  nw/boundary=protected_area,national_park
+nw/railway=station,halt,tram_stop      nw/aeroway=aerodrome
+nw/landuse=reservoir  nw/water=reservoir
+```
+
+索引器新增 7 个类型：`heritage / worship / attraction / reserve / reservoir / station / airport`。
+
+结果：46,346 → **52,645 条**，2.65 → **3.08 MB**。
+
+前端 `search.ts` 补了对应的中文名、权重、图标（塔/星/树/火车/飞机）和俯角。
+`check-search.mjs` 的体积上限提到 3.5 MB，并新增 5 个抽查点
+（武侯祠 / 色达喇荣五明佛学院 / 毕棚沟 / 九寨沟风景名胜区 / 甘孜格萨尔机场）。
+
+**已知**：`色达五明佛学院` 不是 `色达喇荣五明佛学院` 的连续子串，所以搜「色达五明」
+匹配不到，搜「喇荣」或「五明」可以。要做别名得另外维护一张别名表。

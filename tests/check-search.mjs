@@ -24,7 +24,7 @@ const types = d.types ?? [];
 
 if (d.v !== 1) err(`version 应为 1，实际 ${d.v}`);
 const mb = Buffer.byteLength(raw) / 1048576;
-if (mb > 3.0) err(`体积 ${mb.toFixed(2)} MB 超过 3 MB 上限`);
+if (mb > 3.5) err(`体积 ${mb.toFixed(2)} MB 超过 3.5 MB 上限`);
 if (recs.length < 5000) err(`条目只有 ${recs.length}，预期 > 5000`);
 else ok(`条目 ${recs.length.toLocaleString()}，名称 ${names.length.toLocaleString()}，${mb.toFixed(2)} MB`);
 
@@ -60,6 +60,11 @@ const EXPECT = [
   ['幺妹峰', 'peak', 102.9, 31.1],
   ['稻城县', 'city', 100.3, 29.04],
   ['泸沽湖', 'lake', 100.79, 27.71],
+  ['武侯祠', 'worship', 104.05, 30.65],
+  ['色达喇荣五明佛学院', 'worship', 100.47, 32.15],
+  ['毕棚沟', 'reserve', 102.92, 31.31],
+  ['九寨沟风景名胜区', 'attraction', 103.92, 33.27],
+  ['甘孜格萨尔机场', 'airport', 99.55, 31.76],
 ];
 for (const [name, type, lon, lat] of EXPECT) {
   const idx = names.indexOf(name);

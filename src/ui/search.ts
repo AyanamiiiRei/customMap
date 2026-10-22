@@ -38,6 +38,13 @@ const PITCH: Record<string, number> = {
   river: 0,
   trail: 30,
   road: 0,
+  heritage: 20,
+  worship: 20,
+  attraction: 25,
+  reserve: 30,
+  reservoir: 20,
+  station: 0,
+  airport: 0,
 };
 
 const TYPE_LABEL: Record<string, string> = {
@@ -55,12 +62,21 @@ const TYPE_LABEL: Record<string, string> = {
   river: '河流',
   trail: '步道',
   road: '道路',
+  heritage: '古迹',
+  worship: '寺院',
+  attraction: '景点',
+  reserve: '景区',
+  reservoir: '水库',
+  station: '车站',
+  airport: '机场',
 };
 
 const TYPE_BONUS: Record<string, number> = {
   city: 80, town: 70, village: 55, hamlet: 40, district: 35,
   peak: 75, saddle: 65, hut: 70, camp: 65, viewpoint: 50,
   lake: 60, river: 30, trail: 55, road: 45,
+  heritage: 55, worship: 58, attraction: 66, reserve: 66,
+  reservoir: 34, station: 62, airport: 78,
 };
 
 const ICONS: Record<string, string> = {
@@ -71,6 +87,12 @@ const ICONS: Record<string, string> = {
   camp: '<path d="m12 5 7 14H5L12 5Z"/><path d="M12 12v7"/>',
   viewpoint: '<path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="2.4"/>',
   water: '<path d="M12 3s5.5 6.2 5.5 10a5.5 5.5 0 0 1-11 0C6.5 9.2 12 3 12 3Z"/>',
+  heritage: '<path d="M4 20h16"/><path d="M6 20V10l6-4 6 4v10"/><path d="M10 20v-5h4v5"/>',
+  worship: '<path d="M12 3 5 8h14L12 3Z"/><path d="M4 12h16"/><path d="M8 12v8M16 12v8"/><path d="M4 20h16"/>',
+  attraction: '<path d="m12 3 2.4 6.1L21 11l-6.6 1.9L12 19l-2.4-6.1L3 11l6.6-1.9L12 3Z"/>',
+  reserve: '<path d="M12 3 7 11h3l-3 5h10l-3-5h3L12 3Z"/><path d="M12 16v5"/>',
+  station: '<rect x="5" y="3" width="14" height="13" rx="3"/><path d="M5 9h14"/><path d="M9 20l2-4M15 20l-2-4M3 20h18"/>',
+  airport: '<path d="M10.5 3.5a1.5 1.5 0 0 1 3 0V9l7 4v2l-7-2v4l2.5 2v1.5L12 19l-4 1.5V19l2.5-2v-4l-7 2v-2l7-4V3.5Z"/>',
   trail: '<path d="M4 20c4-2 3-6 7-8s3-6 7-8" stroke-dasharray="3 3"/>',
   road: '<path d="M7 21 9 3M17 21 15 3"/><path d="M12 6v2M12 12v2M12 18v2"/>',
 };
@@ -82,7 +104,13 @@ function iconFor(type: string): string {
   else if (type === 'hut') key = 'hut';
   else if (type === 'camp') key = 'camp';
   else if (type === 'viewpoint') key = 'viewpoint';
-  else if (type === 'lake' || type === 'river') key = 'water';
+  else if (type === 'lake' || type === 'river' || type === 'reservoir') key = 'water';
+  else if (type === 'heritage') key = 'heritage';
+  else if (type === 'worship') key = 'worship';
+  else if (type === 'attraction') key = 'attraction';
+  else if (type === 'reserve') key = 'reserve';
+  else if (type === 'station') key = 'station';
+  else if (type === 'airport') key = 'airport';
   else if (type === 'trail') key = 'trail';
   else if (type === 'road') key = 'road';
   return (

@@ -23,6 +23,14 @@ osmium tags-filter "$RAW" \
   nw/tourism=alpine_hut,wilderness_hut,camp_site,viewpoint \
   w/natural=water r/natural=water w/waterway=river \
   w/highway=motorway,trunk,primary,secondary,path,track,footway \
+  nw/historic nw/tourism=museum,attraction,gallery,artwork,zoo,theme_park,information \
+  nw/amenity=place_of_worship,university,college \
+  nw/building=monastery,temple,church,cathedral,chapel,shrine \
+  nw/landuse=religious \
+  nw/leisure=nature_reserve,park,garden \
+  nw/boundary=protected_area,national_park r/boundary=protected_area,national_park \
+  nw/railway=station,halt,tram_stop nw/aeroway=aerodrome \
+  nw/landuse=reservoir nw/water=reservoir \
   -o "$WORK/search.osm.pbf" --overwrite --no-progress
 
 echo "[11] 导出 geojsonseq"
