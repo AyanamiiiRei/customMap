@@ -406,3 +406,30 @@ v6 里有两个闸口会读这个方法，必须都遮：
 | 两次快速平移 | 方位不变，正常平移 |
 | 单击 + 快速按住拖 | 方位 0° → 120° |
 | 纯双击 | zoom 12 → 13 |
+
+## 地图上标出景区 / 文化古迹 / 车站机场（2026-10-22）
+
+**不用加数据**：这些要素本来就在 `osm.pmtiles` 里（`park` / `poi` / `aerodrome_label` 层），
+之前只是没有图层去画。新增 6 个图层，全部走已有的 `osm` 源，**0 额外字节**。
+
+| 图层 | 来源 | 说明 |
+|---|---|---|
+| `scenic-line` / `scenic-label` | osm/park (nature_reserve, national_park) | 虚线边界 + `◇/◆ 名称` |
+| `culture-dot` / `culture-label` | osm/poi (attraction, museum, monument, castle, place_of_worship, college, winter_sports, zoo…) | 圆点按类别配色 + 名称 |
+| `transport-station` / `-label` | osm/poi (class=railway, subclass=station/halt) | 蓝点 + 站名 |
+| `transport-airport` / `-label` | osm/aerodrome_label | 深蓝点 + 机场名 |
+
+图层顺序：`water-fill` → `scenic-line` → `scenic-label` → `contour` → … → `culture-*` → `transport-*` → `trail-name`。
+
+**踩到的两个点**：
+1. 一开始给景区加了绿色 `fill`，结果整个九寨沟保护区被一层淡绿盖住，**地形起伏全被抹平**，
+   变成一块死绿。改成只画虚线边界 + 标签，地形恢复。
+2. `park` 层里同一个景区常被拆成多个多边形，所以「毕棚沟」「九寨沟风景名胜区」
+   会重复出现 2~4 次。MapLibre 只做标签避让，不按名字去重，暂时接受。
+
+面板新增三个分组（都可单独开关 + 调透明度）：景区与保护区 / 文化古迹 / 车站与机场。
+`applyGroup` 补了 `circle-opacity`，否则圆点不跟着透明度走。
+
+**注意**：色达喇荣五明佛学院在瓦片里是 `poi:college/college`，**地图上已经能显示**，
+但它仍然**搜不到**——搜索索引走的是 OSM 原始标签过滤，需要把 `landuse=religious`
+和 `amenity=university/college` 加进去才行（已评估：全局 +6,308 条 / +0.43 MB）。

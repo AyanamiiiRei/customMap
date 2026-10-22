@@ -17,6 +17,9 @@ export const LAYER_GROUPS: LayerGroup[] = [
   { key: 'roads', label: '道路', match: ['road'], hasOpacity: true, color: '#e8734a' },
   { key: 'places', label: '地名', match: ['place-'], hasOpacity: true, color: '#c9ced6' },
   { key: 'peaks', label: '山峰与营地', match: ['peak', 'hut-poi'], hasOpacity: true, color: '#8c8274' },
+  { key: 'scenic', label: '景区与保护区', match: ['scenic-'], hasOpacity: true, color: '#8fbf86' },
+  { key: 'culture', label: '文化古迹', match: ['culture-'], hasOpacity: true, color: '#b4784a' },
+  { key: 'transport', label: '车站与机场', match: ['transport-'], hasOpacity: true, color: '#2e6e8e' },
   { key: 'boundary', label: '行政边界', match: ['boundary'], hasOpacity: true, color: '#8a7a9a' },
 ];
 

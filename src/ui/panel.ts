@@ -140,6 +140,7 @@ export function installPanel(map: maplibregl.Map) {
         if (layer.type === 'fill') map.setPaintProperty(layer.id, 'fill-opacity', op);
         if (layer.type === 'raster') map.setPaintProperty(layer.id, 'raster-opacity', op);
         if (layer.type === 'symbol') map.setPaintProperty(layer.id, 'text-opacity', op);
+        if (layer.type === 'circle') map.setPaintProperty(layer.id, 'circle-opacity', op);
       }
     }
   }
