@@ -17,4 +17,5 @@ export const DESTINATIONS: Destination[] = [
   { name: '稻城亚丁', sub: '6032 m', center: [100.3, 28.45], zoom: 14 },
   { name: '大理', sub: '洱海', center: [100.19, 25.7], zoom: 12 },
   { name: '太原', sub: '山西', center: [112.55, 37.87], zoom: 10 },
+  { name: '重庆', sub: '川东', center: [106.55, 29.56], zoom: 11 },
 ];

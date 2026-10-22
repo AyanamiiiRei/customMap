@@ -25,7 +25,16 @@ export const EXTRA_REGIONS: ExtraRegion[] = [
     label: '山西',
     bbox: [110.2195, 34.5841, 114.5629, 40.745],
   },
+  {
+    prefix: 'sc',
+    suffix: '-c',
+    label: '川东·重庆',
+    bbox: [104.95, 28.0, 110.25, 32.55],
+  },
 ];
+
+/** 区域 A 之外，图层/source 的复制后缀列表 */
+export const EXTRA_SUFFIXES = EXTRA_REGIONS.map((r) => r.suffix);
 
 /** 区域 A 的 source 名 → 附加区域对应 source 名 */
 export const REGION_SOURCE_PAIRS: Array<[string, string[]]> = [

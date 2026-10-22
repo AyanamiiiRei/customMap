@@ -178,7 +178,9 @@ if [[ ",$SKIP," != *",search,"* ]]; then
   osmium export "$WORK/search.osm.pbf" -f geojsonseq -o "$WORK/search.geojson" \
     --overwrite --no-progress
   REGION_BBOX="$BBOX" tools/mambaenv/bin/python pipeline/11-search-index.py \
-    "$WORK/search.geojson" "$OUT/search-extra.json" | tail -3
+    "$WORK/search.geojson" "$OUT/$NAME-search.json" | tail -3
+  # 所有区域索引合并成一个附加索引，前端只多读一个文件
+  tools/mambaenv/bin/python pipeline/merge-search.py
 fi
 
 say "完成"

@@ -10,7 +10,7 @@ import { installSearch } from './ui/search';
 import { installViewControls } from './ui/viewknob';
 import { installGestures } from './ui/gestures';
 import { DESTINATIONS, HOME_VIEW } from './destinations';
-import { EXTRA_REGIONS, pickTerrainSource } from './regions';
+import { EXTRA_SUFFIXES, pickTerrainSource } from './regions';
 
 maplibregl.addProtocol('pmtiles', new Protocol().tile);
 // 提前把 worker / 字形等运行时资源建好，避免第一次交互时才初始化
@@ -52,23 +52,27 @@ async function pruneStyle(style: any): Promise<any> {
 }
 
 /**
- * 附加区域：把区域 A 的每个图层复制一份，source 指向 `<id>-b`。
- * 缺文件的 source 已经在 pruneStyle 里被删掉，所以没数据时这里什么也不做。
+ * 附加区域：把区域 A 的每个图层按区域复制一份，source 指向 `<id><suffix>`。
+ * 缺文件的 source 已经在 pruneStyle 里被删掉，所以没数据的区域不会产生任何图层。
  */
 function expandRegions(style: any): any {
-  const suffix = EXTRA_REGIONS[0]?.suffix ?? '-b';
-  const swap = new Map<string, string>();
-  for (const id of ['dem', 'relief', 'osm', 'hiking', 'contours']) {
-    if (style.sources[`${id}${suffix}`] && style.sources[id]) swap.set(id, `${id}${suffix}`);
+  const REGION_SOURCES = ['dem', 'relief', 'osm', 'hiking', 'contours'];
+  const swap = new Map<string, string[]>();
+  for (const id of REGION_SOURCES) {
+    if (!style.sources[id]) continue;
+    const twins = EXTRA_SUFFIXES.map((sx) => `${id}${sx}`).filter((t) => style.sources[t]);
+    if (twins.length) swap.set(id, twins);
   }
   if (!swap.size) return style;
 
   const out: any[] = [];
   for (const layer of style.layers) {
     out.push(layer);
-    const twin = layer.source ? swap.get(layer.source) : undefined;
-    if (!twin) continue;
-    out.push({ ...structuredClone(layer), id: `${layer.id}${suffix}`, source: twin });
+    const twins = layer.source ? swap.get(layer.source) : undefined;
+    if (!twins) continue;
+    for (const twin of twins) {
+      out.push({ ...structuredClone(layer), id: `${layer.id}${twin}`, source: twin });
+    }
   }
   style.layers = out;
   return style;
