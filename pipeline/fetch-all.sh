@@ -55,9 +55,10 @@ rust/geotiles/target/release/dem2tiles \
 tools/pmtiles convert data/work/dem.mbtiles public/data/dem.pmtiles
 
 step "10. relief.pmtiles（烘焙户外底色 z0-13, webp）"
+# --feather-meters：边缘 60km 内向全球粗底色带过渡，避免和 relief-world 拼出矩形色差
 rust/geotiles/target/release/bake-relief \
   --dem data/work/dem_3857.tif --landcover data/work/worldcover_3857.tif \
-  --output data/work/relief.mbtiles --minzoom 0 --maxzoom 13 --format webp
+  --output data/work/relief.mbtiles --minzoom 0 --maxzoom 13 --format webp --feather-meters 60000
 tools/pmtiles convert data/work/relief.mbtiles public/data/relief.pmtiles
 
 # ── 4. 可选：等高线 ─────────────────────────────────────────────
@@ -69,6 +70,9 @@ step "12. 中文字形"
 bash pipeline/08-glyphs.sh
 
 # ── 6. 校验 ────────────────────────────────────────────────────
+step "12b. 全球粗底（ETOPO，z0-7）"
+bash pipeline/10-world-relief.sh
+
 step "13. 自动化检查"
 node tests/check-bbox.mjs
 node tests/check-dem.mjs

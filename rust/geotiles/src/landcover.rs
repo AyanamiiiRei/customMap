@@ -86,6 +86,60 @@ pub fn hypsometric_weight(elev: f64) -> f64 {
     0.30 + 0.45 * smoothstep(4000.0, 5000.0, elev)
 }
 
+/// Ocean colour from depth (metres below sea level).
+///
+/// The deep end is exactly `#1E4E6B`, the same value the style uses for
+/// `background` / `world-ocean`, so the seam where the global relief runs out
+/// (z8+) is invisible in open water. Continental shelves stay lighter.
+pub fn ocean_color(depth_m: f64) -> [f64; 3] {
+    let shelf = hex(0x6FA8C8);
+    let slope = hex(0x4A7F9E);
+    let deep = hex(0x2C5B78);
+    let abyss = hex(0x1E4E6B);
+    let d = depth_m.max(0.0);
+    if d < 200.0 {
+        mix(shelf, slope, d / 200.0)
+    } else if d < 2000.0 {
+        mix(slope, deep, (d - 200.0) / 1800.0)
+    } else if d < 5000.0 {
+        mix(deep, abyss, (d - 2000.0) / 3000.0)
+    } else {
+        abyss
+    }
+}
+
+/// 全球粗底用的高程色带。
+///
+/// 和 `hypsometric_tint` 的区别：更暗、更绿。因为 z0-7 的全球底要和川西那块
+/// 用 WorldCover 真实地类上色的细图拼在一起，原来那套浅黄绿的「physical map」
+/// 色带会在交界处形成一条刺眼的矩形色差。压低明度后两者能对上。
+pub fn hypsometric_tint_world(elev: f64, slope_deg: f64) -> [f64; 3] {
+    let low = hex(0x6F9455);   // 低地：湿润绿
+    let mid = hex(0x557F4C);   // 丘陵
+    let high = hex(0x47703F);  // 山地
+    let rock = hex(0x7C7263);  // 高山裸岩
+    let scree = hex(0x9A9080);
+    let snow = hex(0xE2E7E9);
+    if elev < 800.0 {
+        return low;
+    }
+    if elev < 2500.0 {
+        return mix(low, mid, (elev - 800.0) / 1700.0);
+    }
+    if elev < 4000.0 {
+        return mix(mid, high, (elev - 2500.0) / 1500.0);
+    }
+    if elev < 4800.0 {
+        return mix(high, rock, (elev - 4000.0) / 800.0);
+    }
+    if elev < 5200.0 {
+        return mix(rock, scree, (elev - 4800.0) / 400.0);
+    }
+    let by_elev = smoothstep(5200.0, 5600.0, elev);
+    let by_slope = 1.0 - smoothstep(34.0, 48.0, slope_deg);
+    mix(scree, snow, by_elev * by_slope)
+}
+
 /// Global desaturation towards grey by `amount` (0.1 = mix 10% grey).
 pub fn desaturate(c: [f64; 3], amount: f64) -> [f64; 3] {
     let gray = 0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2];

@@ -33,6 +33,13 @@ fn main() -> Result<()> {
     let minzoom = cli::arg_u32(&args, "--minzoom", 0)?;
     let maxzoom = cli::arg_u32(&args, "--maxzoom", 13)?;
     let format = cli::arg_value(&args, "--format").unwrap_or_else(|| "webp".to_string());
+    // 全球粗底用另一套更暗的高程色带，见 landcover::hypsometric_tint_world
+    let world_palette = args.iter().any(|a| a == "--world-palette");
+    // 研究区边缘的羽化宽度（米）：靠近边界时把颜色向「全球粗底色带」靠拢，
+    // 这样细图和全球底拼在一起时不会出现一条矩形色差。0 = 硬边。
+    let feather = cli::arg_value(&args, "--feather-meters")
+        .and_then(|v| v.parse::<f64>().ok())
+        .unwrap_or(0.0);
     if format != "webp" && format != "png" {
         anyhow::bail!("--format must be webp or png, got {format}");
     }
@@ -61,6 +68,8 @@ fn main() -> Result<()> {
         let (x0, x1, y0, y1) = tile::tiles_covering_bbox(z, bounds.0, bounds.1, bounds.2, bounds.3);
         eprintln!("z{z}: tiles x[{x0}..={x1}] y[{y0}..={y1}]");
         let res = tile::tile_res(z);
+        // z5-6 几乎完全用高程色带（和全球粗底一致），z7.5 之后交还给真实地类
+        let zoom_blend = 0.30 + ((7.5 - z as f64) / 2.5).clamp(0.0, 0.62);
         for y in y0..=y1 {
             let rows: Vec<TileRow> = (x0..=x1)
                 .into_par_iter()
@@ -158,8 +167,32 @@ fn main() -> Result<()> {
                             let idx = j * WIN + i;
                             let e = elev[idx];
                             let slope = shade::slope_deg(gx[idx], gy[idx]);
-                            let hypso = landcover::hypsometric_tint(e, slope);
+                            let hypso = if world_palette {
+                                landcover::hypsometric_tint_world(e, slope)
+                            } else {
+                                landcover::hypsometric_tint(e, slope)
+                            };
+                            // 低 zoom 时一个像素代表几公里，WorldCover 的「主导地类」
+                            // 已经没有意义（整片森林会被涂成一块深绿），所以要向
+                            // 高程色带靠拢——靠拢的目标和全球粗底用的是同一条色带，
+                            // 两块拼图在 z5-7 才会无缝。
+                            let blend_target = landcover::hypsometric_tint_world(e, slope);
 
+                            let mx = tminx + (u as f64 + 0.5) * res;
+                            let my = tmaxy - (v as f64 + 0.5) * res;
+                            // 海面：ETOPO/全球 DEM 带水深，直接按深度上色，
+                            // 不做晕渲也不做噪声（平坦海面加噪声只会脏）。
+                            if e < -0.5 {
+                                let c = landcover::ocean_color(-e);
+                                let o = (v * 256 + u) * 4;
+                                let inside = mx >= ext_minx && mx <= ext_maxx
+                                    && my >= ext_miny && my <= ext_maxy;
+                                rgb[o] = c[0].round().clamp(0.0, 255.0) as u8;
+                                rgb[o + 1] = c[1].round().clamp(0.0, 255.0) as u8;
+                                rgb[o + 2] = c[2].round().clamp(0.0, 255.0) as u8;
+                                rgb[o + 3] = if inside { 255 } else { 0 };
+                                continue;
+                            }
                             let mut base = if known[idx] {
                                 landcover::landcover_color(class[idx]).unwrap()
                             } else {
@@ -175,7 +208,8 @@ fn main() -> Result<()> {
                                 base = [base[0] * f, base[1] * f, base[2] * f];
                             }
 
-                            base = landcover::mix(base, hypso, landcover::hypsometric_weight(e));
+                            let w = landcover::hypsometric_weight(e).max(zoom_blend);
+                            base = landcover::mix(base, blend_target, w);
                             let s = shade::hillshade_multi(gx[idx], gy[idx]);
                             base = [
                                 base[0] * (0.50 + 0.50 * s),
@@ -196,7 +230,17 @@ fn main() -> Result<()> {
                                 base[1] * (1.0 + 0.09 * n),
                                 base[2] * (1.0 + 0.09 * n),
                             ];
-                            let c = landcover::desaturate(base, 0.06);
+                            let mut c = landcover::desaturate(base, 0.06);
+                            if feather > 0.0 {
+                                let dx = (mx - ext_minx).min(ext_maxx - mx);
+                                let dy = (my - ext_miny).min(ext_maxy - my);
+                                let d = dx.min(dy);
+                                if d < feather {
+                                    let t = 1.0 - (d / feather).clamp(0.0, 1.0);
+                                    let wc = landcover::hypsometric_tint_world(e, slope);
+                                    c = landcover::mix(c, wc, t * 0.92);
+                                }
+                            }
                             let mx = tminx + (u as f64 + 0.5) * res;
                             let my = tmaxy - (v as f64 + 0.5) * res;
                             let inside = mx >= ext_minx && mx <= ext_maxx

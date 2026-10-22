@@ -131,3 +131,43 @@ npm_config_cache="$PWD/.npm-cache"
 | 康定 | 3465 | **2665** | 2660 |
 | 贡嘎主峰 | 9641 | **7416** | 7401 |
 把夸张度调到 2.0 后，HUD 仍读 493 m（原始 987）。
+
+## 全球粗底：ETOPO（2026-10-22）
+
+问题：比例尺拉到 200km（z5-6）时川西之外是纯色地球仪，因为地形数据只覆盖研究区 bbox。
+
+方案：ETOPO 2022 60″（1.8km，含海底地形）做 z0-7 的全球底，并进现有两个产物。
+
+### 数据
+| 产物 | 内容 | 大小 |
+|---|---|---|
+| `relief-world.pmtiles` | 全球户外底色 z0-7，含海洋深度着色 | 57 MB |
+| `dem.pmtiles` | 原川西 z0-12 + 全球 z0-6 补洞 | 1.4 GB（原 1.2 GB） |
+
+ETOPO 原始文件 466 MB（NOAA，单连接 ~90KB/s，必须用 `fetch-fast.sh` 24 段并发）。
+
+### 实现要点
+- `pipeline/10-world-relief.sh`：warp 到 3857 @1223m（z7 在赤道 1:1）→ gdal_rasterize
+  NE 沙漠/苔原多边形当粗略地类 → `dem2tiles` z0-6 → **insert-missing 合并**进
+  `dem.mbtiles`（川西瓦片优先，全球只补缺的）→ `bake-relief --world-palette` z0-7。
+- `bake-relief` 新增海面分支：`elev < 0` 直接按水深上色（`ocean_color`），
+  深端取 `#1E4E6B`，和 style 的 `background` / `world-ocean` 完全同色，
+  z7 之后全球底色退场时海面不会跳色。
+- `--world-palette`：全球用一套更暗更绿的高程色带（`hypsometric_tint_world`），
+  比原来浅黄绿的 physical map 色带更接近 WorldCover 上色的细图。
+
+### 接缝（花了最多时间的地方）
+细图（WorldCover 真实地类）和全球图（纯高程色带）拼在一起，最初是一块荧光绿矩形。
+三层修正：
+1. **低 zoom 时向高程色带靠拢**：`zoom_blend = 0.30 + clamp((7.5-z)/2.5, 0, 0.62)`，
+   z5 时 0.92（几乎等于全球底色，看不出边界），z7.5 之后回落 0.30 交还真实地类。
+   理由：z5 一个像素代表 5km，WorldCover 的「主导地类」已经没有意义。
+2. **边缘羽化** `--feather-meters 60000`：靠近 bbox 边界 60km 内继续向全球色带过渡。
+3. **全球色带加深**，缩小两套调色板的整体明度差。
+
+效果：z5 只剩极淡的矩形痕迹，z7 基本看不出，z9 以上完全恢复细图。
+
+### 顺带
+- `check-bbox.mjs` 区分「全球产物」和「研究区产物」：前者要求覆盖 bbox，后者要求落在 bbox 内。
+- `prefetch.ts` 加入 `relief-world`（z0-7，很便宜）。
+- 体积 2.50 → 2.65 GB。

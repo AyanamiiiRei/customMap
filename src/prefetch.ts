@@ -30,6 +30,8 @@ const SPECS: WarmSpec[] = [
   // 缩小时需要的是父级（z-1/-2），放大时需要子级（z+1/+2），两个方向都要预热，
   // 否则「缩小」永远比「放大」卡——父级从来没人提前下过。
   { id: 'dem', url: '/data/dem.pmtiles', maxzoom: 12, ahead: 2, behind: 2, budget: 400 },
+  // 全球粗底只在 z0-7 用得上，预取很便宜
+  { id: 'relief-world', url: '/data/relief-world.pmtiles', maxzoom: 7, ahead: 2, behind: 2, budget: 200 },
   { id: 'relief', url: '/data/relief.pmtiles', maxzoom: 13, ahead: 2, behind: 2, budget: 400 },
   { id: 'osm', url: '/data/osm.pmtiles', maxzoom: 14, ahead: 1, behind: 1, budget: 400 },
   { id: 'contours', url: '/data/contours.pmtiles', maxzoom: 14, ahead: 1, behind: 1, budget: 240 },

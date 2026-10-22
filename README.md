@@ -4,7 +4,7 @@
 
 ## 快速开始
 
-**数据不在仓库里**（产物 ~2.5GB，不入 git）。一条命令全自动下载+处理（约 7GB 下载，数小时；幂等可中断续跑）：
+**数据不在仓库里**（产物 ~2.65GB，不入 git）。一条命令全自动下载+处理（约 7GB 下载，数小时；幂等可中断续跑）：
 
 ```bash
 bash pipeline/fetch-all.sh            # 默认川西 bbox 96,26,105,35；换区域传参即可
@@ -93,9 +93,9 @@ node tests/check-no-gcj.mjs  # 无坐标纠偏代码
 
 ## 截图
 
-| 地球 | 川西 z7 | 川西 z9 |
+| 地球（全球 ETOPO 粗底） | 川西 z5（200km 比例尺） | 川西 z9 |
 |---|---|---|
-| ![globe](shots/01-globe-final.png) | ![z7](shots/v5-z7.png) | ![z9](shots/v5-z9.png) |
+| ![globe](shots/world-globe.png) | ![z5](shots/world-z5.png) | ![z9](shots/v5-z9.png) |
 
 | 贡嘎 3D z14 | 徒步小径 z15 | 图层抽屉 |
 |---|---|---|

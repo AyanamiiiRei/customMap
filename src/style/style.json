@@ -61,6 +61,12 @@
       "url": "pmtiles:///data/contours.pmtiles",
       "maxzoom": 15,
       "attribution": "Copernicus DEM GLO-30"
+    },
+    "relief-world": {
+      "type": "raster",
+      "url": "pmtiles:///data/relief-world.pmtiles",
+      "tileSize": 256,
+      "maxzoom": 7
     }
   },
   "terrain": {
@@ -126,6 +132,16 @@
           6,
           1.5
         ]
+      }
+    },
+    {
+      "id": "relief-world",
+      "type": "raster",
+      "source": "relief-world",
+      "minzoom": 0,
+      "paint": {
+        "raster-opacity": 1,
+        "raster-fade-duration": 0
       }
     },
     {
