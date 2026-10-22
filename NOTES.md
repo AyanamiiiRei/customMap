@@ -239,3 +239,27 @@ HUD 增加「视角」一行。MapLibre 6 的 `Map` 没有公开 `getCameraAltit
 - LOD 不再写死在 `main.ts`，统一由设置页施加，避免和用户选择打架。
 - `prefetch.ts` 增加 `prefetchState.enabled` 运行时开关；暂停时 pump/定时器都会让路。
 - `hud.ts` 导出 `perfStats.fps` 给设置页复用，不重复开 rAF 计数。
+
+## 修：放大后 DEM 到货导致相机高度跳变（2026-10-22）
+
+**复现**：z11 / pitch 60 起跳，`jumpTo` 到 z13.2 的一片新山区，逐帧采样
+`_camera.transform.getCameraAltitude()`：
+
+| 模式 | 结果 |
+|---|---|
+| 默认（中心点跟随地面） | t=76ms 一次 +5186（缩放本身）→ **t=1188ms 又一次 +64m**，同时 `getCenterElevation()` 从 5191 变成 5255 |
+| `setCenterClampedToGround(false)` | 只有缩放那一次，**`getCenterElevation()` 全程恒定 4891，无二次跳变** |
+
+**根因**：MapLibre 在静止时每帧都执行
+`if (!elevationFreeze && centerClampedToGround) transform.setElevation(dem(center))`。
+缩放之后新的 DEM 瓦片到货，该点高程随之改变，相机就跟着跳。手势期间 MapLibre 会
+`holdElevation` 冻结，但**手势结束后解冻**，于是「LOD 加载完成后跳一下」。
+
+**处理**：`map.setCenterClampedToGround(false)`，并在图形页加了「相机 › 跟随地面高程」
+开关（默认关，想回到贴地飞行可以打开）。默认关掉后 `getCenterElevation()` 恒定，
+缩放不再跳。
+
+**代价**（实测过）：中心高程不再更新，平移到更高的山时相机会低于地面，
+但 MapLibre 自己的 `_keepCameraAboveTerrain` 会把它抬起来，画面不会穿模
+（实测从 4260m 区域平移到 6880m 的贡嘎主峰，视野正常，只是 HUD 的「视角」会
+显示被抬高后的真实值）。
