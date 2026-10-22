@@ -935,8 +935,13 @@ kbd {
   bottom: 62px;
   z-index: 16;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
+  gap: 9px;
+}
+.ctrl-column {
+  display: flex;
+  flex-direction: column;
   gap: 9px;
 }
 
@@ -1013,8 +1018,8 @@ kbd {
 
 .knob-readout {
   position: absolute;
-  right: 62px;
-  top: 10px;
+  right: calc(100% + 12px);
+  top: 50%;
   padding: 5px 9px;
   border-radius: 8px;
   background: var(--panel-solid);
@@ -1025,13 +1030,13 @@ kbd {
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
   opacity: 0;
-  transform: translateX(6px);
+  transform: translateY(-50%) translateX(6px);
   transition: opacity 0.15s var(--ease), transform 0.15s var(--ease);
   pointer-events: none;
 }
 .knob-readout.on {
   opacity: 1;
-  transform: none;
+  transform: translateY(-50%);
 }
 
 .ctrl-stack {
@@ -1096,7 +1101,8 @@ body.alt-rotating .maplibregl-canvas {
     height: 38px;
   }
   .knob-readout {
-    right: 54px;
+    right: calc(100% + 8px);
+    font-size: 10px;
   }
 }
 

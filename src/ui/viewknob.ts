@@ -83,7 +83,11 @@ export function installViewControls(map: maplibregl.Map) {
   });
   fullBox.append(fs);
 
-  cluster.append(knob, readout, zoomBox, fullBox);
+  knob.append(readout);
+  const column = document.createElement('div');
+  column.className = 'ctrl-column';
+  column.append(zoomBox, fullBox);
+  cluster.append(knob, column);
   document.body.append(cluster);
 
   // ── 状态同步 ──────────────────────────────────────────────
