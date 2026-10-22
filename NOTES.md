@@ -171,3 +171,29 @@ ETOPO 原始文件 466 MB（NOAA，单连接 ~90KB/s，必须用 `fetch-fast.sh`
 - `check-bbox.mjs` 区分「全球产物」和「研究区产物」：前者要求覆盖 bbox，后者要求落在 bbox 内。
 - `prefetch.ts` 加入 `relief-world`（z0-7，很便宜）。
 - 体积 2.50 → 2.65 GB。
+
+## 3D 俯视：LOD 与相机高度（2026-10-22 晚）
+
+### 远处的 LOD（已改）
+`map.setSourceTileLodParams(3, 5)`，在 `load` 后调用：
+- 第 1 个参数 = 同屏允许的 zoom 级数。默认值在地平线附近 LOD 衰减很快，
+  60° 俯角时屏幕上缘的地形比下缘糊一大截；调到 3 后远处能拿到更细的瓦片。
+- 第 2 个参数 = 高 pitch 下允许的瓦片数倍率，放宽到 5。
+- 代价：请求数 +15~20%，LOD 分级边界会略微可见（放大到 z12 以上不明显）。
+
+### 相机高度（已加）
+HUD 增加「视角」一行。MapLibre 6 的 `Map` 没有公开 `getCameraAltitude()`，
+只有内部 `_camera.transform.getCameraAltitude()`。它返回的高度**包含地形夸张**，
+所以要换算：`真实海拔 = alt − centerElev × (1 − 1/exaggeration)`。
+实测 z12 / pitch 62 / 夸张 1.3：内部值 15956 m，地面 5447 m（真实 4190 m），
+显示 14699 m，与换算结果一致。
+
+### 闪烁（改了一处，未完全定位）
+`fadeDuration` 从 120 改回 **0**。120ms 的 alpha 淡入在大量瓦片同时进出时
+本身就像在闪，而地形 drape 每帧都在重画，淡入只会增加噪点。
+**「横向拖动时相机高度跳变」在 headless 里没能复现**：脚本拖拽时
+`transform.getCameraAltitude()` 全程恒定（MapLibre 在 gesture 期间会
+`holdElevation` 冻结中心高程，松手才 putCenterBackOnTerrain），5 次拖拽松手后的
+高度差都是 0。所以要么是真实指针/惯性输入才触发，要么与 DEM 瓦片在手势中落地有关。
+排查入口：控制台 `__map.setCenterClampedToGround(false)`（关掉中心点跟随地面高程），
+或者 `__map.getCenterClampedToGround()` 看当前状态。

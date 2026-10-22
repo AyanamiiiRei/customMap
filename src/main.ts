@@ -71,8 +71,9 @@ async function main() {
     // 缩放过程中不取消仍在途的旧级别瓦片请求：
     // 默认 true 会在放大时把上一级没下完的瓦片全砍掉，细节只能等停了才出现
     cancelPendingTileRequestsWhileZooming: false,
-    // 不留 fade 会硬切（LOD 跳变更扎眼），太长又会糊；120ms 只用来盖住换级那一下
-    fadeDuration: 120,
+    // 0：不做淡入。120ms 的 alpha 动画在大量瓦片同时进出时会被看成「闪」，
+    // 而地形 drape 本身每帧都在重画，淡入反而是噪点。
+    fadeDuration: 0,
     attributionControl: { compact: true },
   });
 
@@ -85,6 +86,11 @@ async function main() {
       map.setTerrain({ source: 'dem', exaggeration: 1.3 });
     }
     map.setLight({ anchor: 'viewport', position: [1.5, 90, 80] });
+    // 俯视时让远处也能拿到更细的瓦片：
+    //   第一个参数 = 同屏允许的 zoom 级数（越大，地平线方向的 LOD 衰减越慢）
+    //   第二个参数 = 高 pitch 下允许加载的瓦片数相对最小值倍率
+    // 默认值在 60° 俯角下，屏幕上缘的地形会比下缘糊一大截。
+    map.setSourceTileLodParams(3, 5);
     (window as any).__mapLoaded = true;
   });
   map.on('idle', () => { (window as any).__mapIdle = true; });

@@ -32,6 +32,21 @@ export function installHud(map: maplibregl.Map) {
     }
   });
 
+  /**
+   * 相机海拔（米，海平面起算）。
+   * MapLibre 6 的 Map 上没有公开 getCameraAltitude()，只有内部 transform 有；
+   * 而它返回的高度里包含了地形夸张后的地面高度，所以要换算回真实海拔：
+   *   真实海拔 = 相机高度_夸张坐标系 − 地面高度_夸张 × (1 − 1/夸张度)
+   */
+  function cameraAltitude(): number | null {
+    const tr = (map as any)._camera?.transform;
+    if (!tr || typeof tr.getCameraAltitude !== 'function') return null;
+    const a = tr.getCameraAltitude();
+    if (!Number.isFinite(a)) return null;
+    const ex = map.getTerrain()?.exaggeration ?? 1;
+    return a - map.getCenterElevation() * (1 - 1 / (ex > 0 ? ex : 1));
+  }
+
   function fmt(ll: maplibregl.LngLat): string {
     const ns = ll.lat >= 0 ? 'N' : 'S';
     const ew = ll.lng >= 0 ? 'E' : 'W';
@@ -43,8 +58,10 @@ export function installHud(map: maplibregl.Map) {
     const ex = map.getTerrain()?.exaggeration ?? 1;
     const elev = rawElev != null ? rawElev / (ex > 0 ? ex : 1) : null;
     const ele = elev != null && elev > -100 ? `${elev.toFixed(0)} m` : '—';
+    const alt = cameraAltitude();
+    const altTxt = alt != null ? `${alt.toFixed(0)} m` : '—';
     hud.innerHTML =
-      `经纬度 ${pos}\n海拔   ${ele}\n缩放   z${zoom.toFixed(1)}\n` +
+      `经纬度 ${pos}\n海拔   ${ele}\n视角   ${altTxt}\n缩放   z${zoom.toFixed(1)}\n` +
       `<span class="fps">FPS    ${fps}</span>`;
   }, 250);
 }
