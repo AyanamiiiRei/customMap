@@ -57,9 +57,12 @@ interface Job {
   y: number;
 }
 
+/** 运行时开关，图形设置面板会改它 */
+export const prefetchState = { enabled: true };
+
 export function installPrefetch(map: maplibregl.Map) {
-  const enabled = !/[?&]prefetch=0/.test(location.search);
-  if (!enabled) return;
+  prefetchState.enabled = !/[?&]prefetch=0/.test(location.search);
+  if (!prefetchState.enabled) return;
 
   const archives = new Map<string, PMTiles>();
   const headersReady = new Map<string, Promise<unknown>>();
@@ -90,7 +93,7 @@ export function installPrefetch(map: maplibregl.Map) {
   }
 
   function pump() {
-    if (paused) return;
+    if (paused || !prefetchState.enabled) return;
     while (running < CONCURRENCY && queue.length) {
       const job = queue.shift()!;
       running++;
@@ -154,7 +157,7 @@ export function installPrefetch(map: maplibregl.Map) {
     if (timer !== undefined) return;
     timer = window.setTimeout(() => {
       timer = undefined;
-      if (document.hidden) return;
+      if (document.hidden || !prefetchState.enabled) return;
       void Promise.all(SPECS.map(ready)).then(() => {
         queue = queue.concat(collect());
         pump();

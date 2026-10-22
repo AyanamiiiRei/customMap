@@ -94,14 +94,8 @@ async function main() {
       map.setTerrain({ source: 'dem', exaggeration: 1.3 });
     }
     map.setLight({ anchor: 'viewport', position: [1.5, 90, 80] });
-    // 俯视时让远处也能拿到更细的瓦片：
-    //   第 1 个参数 = 同屏允许的 zoom 级数。调大能让地平线方向更清晰，但不同
-    //     zoom 级之间会出现可见的分层带（实测 3 就会在坡面上出现绿色条纹），
-    //     所以这里保持 2。
-    //   第 2 个参数 = 高 pitch 下允许加载的瓦片数倍率。实测调到 4~5 时远处
-    //     更清楚，但坡面上会出现一条明显的绿色分层带（不同 zoom 的瓦片混在
-    //     一起渲染），所以停在 2。
-    map.setSourceTileLodParams(2, 2);
+    // LOD / 渲染分辨率 / 各向异性过滤由「图形」设置页统一施加（src/ui/panel.ts），
+    // 这里不再写死，免得和用户选择打架。
     (window as any).__mapLoaded = true;
   });
   map.on('idle', () => { (window as any).__mapIdle = true; });

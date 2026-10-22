@@ -629,3 +629,111 @@ kbd {
     padding: 8px 11px;
   }
 }
+
+/* ── 抽屉内标签页 ───────────────────────────────────────── */
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin: 12px 12px 6px;
+  padding: 4px;
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.06);
+}
+.tab {
+  flex: 1;
+  padding: 6px 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+  transition: background 0.16s var(--ease), color 0.16s var(--ease);
+}
+.tab.on {
+  background: rgba(255, 255, 255, 0.13);
+  color: var(--ink);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.32);
+}
+
+/* ── 分段控件 ───────────────────────────────────────────── */
+.field {
+  padding: 10px 8px 2px;
+}
+.field > .label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 7px;
+}
+.field > .label b {
+  color: var(--ink);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.field .note {
+  font-size: 10.5px;
+  color: var(--faint);
+  line-height: 1.55;
+  margin-top: 6px;
+}
+.seg {
+  display: flex;
+  gap: 5px;
+}
+.seg button {
+  flex: 1;
+  padding: 8px 2px;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.16s var(--ease), border-color 0.16s var(--ease), color 0.16s var(--ease);
+}
+.seg button:hover {
+  border-color: var(--line-strong);
+  color: var(--ink);
+}
+.seg button.on {
+  background: var(--accent-dim);
+  border-color: rgba(242, 166, 90, 0.5);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* ── 统计条 ─────────────────────────────────────────────── */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin: 12px 4px 4px;
+}
+.stat {
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.035);
+  padding: 8px 10px;
+}
+.stat .k {
+  font-size: 10px;
+  color: var(--faint);
+  letter-spacing: 0.05em;
+}
+.stat .v {
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  margin-top: 2px;
+}
+.stat .v small {
+  font-size: 10px;
+  color: var(--muted);
+  margin-left: 2px;
+}

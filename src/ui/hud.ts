@@ -1,5 +1,8 @@
 import type * as maplibregl from 'maplibre-gl';
 
+/** HUD 测到的实时帧率，图形设置面板要读 */
+export const perfStats = { fps: 0 };
+
 /**
  * 左下角仪表盘：坐标 / 海拔 / 相机视角高度 / 缩放 / FPS。
  * 逐个写 DOM 文本而不是整块 innerHTML，避免每 250ms 重建节点把鼠标选中打断。
@@ -67,6 +70,7 @@ export function installHud(map: maplibregl.Map) {
   }
 
   setInterval(() => {
+    perfStats.fps = fps;
     setValue(posEl, lngLat ? fmtLL(lngLat) : '—', !lngLat);
 
     const ex = map.getTerrain()?.exaggeration ?? 1;

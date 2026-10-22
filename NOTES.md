@@ -220,3 +220,22 @@ HUD 增加「视角」一行。MapLibre 6 的 `Map` 没有公开 `getCameraAltit
 实测把 zoom 级数放到 3 或把瓦片倍率放到 4~5，远处确实更清楚，
 但坡面上会出现一条明显的绿色分层带（不同 zoom 的瓦片混渲染）。
 (2,2) 在远处清晰度和画质之间是当前能找到的最好点。
+
+## 图形设置页（2026-10-22 深夜）
+
+抽屉改成两个标签页：**图层 / 图形**。图形页把之前只能在代码里改的性能参数全部暴露出来：
+
+| 项 | 取值 | 对应 API |
+|---|---|---|
+| 画质预设 | 省电 / 均衡 / 高画质 | 一次性套用下面四项 |
+| 渲染分辨率 | 1× / 1.5× / 2× / 自动 | `map.setPixelRatio()`，自动 = `min(devicePixelRatio, 2)` |
+| 远处地形细节 | 省电 / 均衡 / 锐利 | `map.setSourceTileLodParams([1,1]/[2,2]/[3,5])` |
+| 远景清晰度 | 关 / 默认 / 强 | `map.setAnisotropicFilterPitch(90/20/0)` |
+| 空闲预取瓦片 | 开 / 关 | `prefetchState.enabled` |
+
+- 单独改动任一项 → 预设标记为「自定义」。
+- 底部实时显示 FPS（按 50/30 变色）、当前渲染分辨率、缩放。
+- 全部设置存 `localStorage`（键升到 `chuanxi-map-state-v2`，会自动迁移 v1 的图层状态）。
+- LOD 不再写死在 `main.ts`，统一由设置页施加，避免和用户选择打架。
+- `prefetch.ts` 增加 `prefetchState.enabled` 运行时开关；暂停时 pump/定时器都会让路。
+- `hud.ts` 导出 `perfStats.fps` 给设置页复用，不重复开 rAF 计数。
