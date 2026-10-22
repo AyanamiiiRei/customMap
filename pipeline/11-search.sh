@@ -31,6 +31,7 @@ osmium tags-filter "$RAW" \
   nw/boundary=protected_area,national_park r/boundary=protected_area,national_park \
   nw/railway=station,halt,tram_stop nw/aeroway=aerodrome \
   nw/landuse=reservoir nw/water=reservoir \
+  nw/landuse=winter_sports nw/piste:type \
   -o "$WORK/search.osm.pbf" --overwrite --no-progress
 
 echo "[11] 导出 geojsonseq"

@@ -45,6 +45,7 @@ const PITCH: Record<string, number> = {
   reservoir: 20,
   station: 0,
   airport: 0,
+  ski: 30,
 };
 
 const TYPE_LABEL: Record<string, string> = {
@@ -69,6 +70,7 @@ const TYPE_LABEL: Record<string, string> = {
   reservoir: '水库',
   station: '车站',
   airport: '机场',
+  ski: '滑雪场',
 };
 
 const TYPE_BONUS: Record<string, number> = {
@@ -76,7 +78,7 @@ const TYPE_BONUS: Record<string, number> = {
   peak: 75, saddle: 65, hut: 70, camp: 65, viewpoint: 50,
   lake: 60, river: 30, trail: 55, road: 45,
   heritage: 55, worship: 58, attraction: 66, reserve: 66,
-  reservoir: 34, station: 62, airport: 78,
+  reservoir: 34, station: 62, airport: 78, ski: 64,
 };
 
 const ICONS: Record<string, string> = {
@@ -93,6 +95,7 @@ const ICONS: Record<string, string> = {
   reserve: '<path d="M12 3 7 11h3l-3 5h10l-3-5h3L12 3Z"/><path d="M12 16v5"/>',
   station: '<rect x="5" y="3" width="14" height="13" rx="3"/><path d="M5 9h14"/><path d="M9 20l2-4M15 20l-2-4M3 20h18"/>',
   airport: '<path d="M10.5 3.5a1.5 1.5 0 0 1 3 0V9l7 4v2l-7-2v4l2.5 2v1.5L12 19l-4 1.5V19l2.5-2v-4l-7 2v-2l7-4V3.5Z"/>',
+  ski: '<path d="M3 20 14 7"/><path d="M9 20h11"/><circle cx="7.5" cy="6.5" r="2.2"/><path d="m10 11 3 2 3-1"/>',
   trail: '<path d="M4 20c4-2 3-6 7-8s3-6 7-8" stroke-dasharray="3 3"/>',
   road: '<path d="M7 21 9 3M17 21 15 3"/><path d="M12 6v2M12 12v2M12 18v2"/>',
 };
@@ -111,6 +114,7 @@ function iconFor(type: string): string {
   else if (type === 'reserve') key = 'reserve';
   else if (type === 'station') key = 'station';
   else if (type === 'airport') key = 'airport';
+  else if (type === 'ski') key = 'ski';
   else if (type === 'trail') key = 'trail';
   else if (type === 'road') key = 'road';
   return (

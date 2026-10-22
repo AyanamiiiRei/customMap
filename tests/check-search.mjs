@@ -65,6 +65,7 @@ const EXPECT = [
   ['毕棚沟', 'reserve', 102.92, 31.31],
   ['九寨沟风景名胜区', 'attraction', 103.92, 33.27],
   ['甘孜格萨尔机场', 'airport', 99.55, 31.76],
+  ['羌人谷滑雪场', 'ski', 103.5, 31.68],
 ];
 for (const [name, type, lon, lat] of EXPECT) {
   const idx = names.indexOf(name);

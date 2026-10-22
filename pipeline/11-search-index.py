@@ -27,6 +27,7 @@ TYPES = [
     "peak", "saddle", "hut", "camp", "viewpoint",
     "lake", "river", "trail", "road",
     "heritage", "worship", "attraction", "reserve", "reservoir", "station", "airport",
+    "ski",
 ]
 TYPE_IDX = {t: i for i, t in enumerate(TYPES)}
 
@@ -96,6 +97,8 @@ def classify(props: dict) -> str | None:
     route = props.get("route")
     if route in ("hiking", "foot", "mtb"):
         return "trail"
+    if props.get("landuse") == "winter_sports" or props.get("piste:type"):
+        return "ski"
     if props.get("landuse") == "religious" or props.get("amenity") in ("university", "college"):
         return "worship"
     if props.get("historic"):
@@ -204,6 +207,9 @@ def main() -> int:
             if not name:
                 dropped["no_name"] += 1
                 continue
+            # 名字里带「滑雪」的统一归到 ski，避免同一类雪场显示成景点/景区/滑雪场三种
+            if "滑雪" in name and ftype in ("attraction", "reserve", "heritage"):
+                ftype = "ski"
             pt = rep_point(feat.get("geometry") or {})
             if not pt:
                 dropped["no_geom"] += 1
