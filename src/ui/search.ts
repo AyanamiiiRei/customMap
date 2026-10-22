@@ -174,7 +174,8 @@ export function installSearch(map: maplibregl.Map) {
   function loadIndex(): Promise<Entry[]> {
     if (entries) return Promise.resolve(entries);
     if (loading) return loading;
-    loading = fetch('/data/search.json')
+    // no-store：索引会随数据重建，浏览器缓存住的旧版本会让新类型搜不到
+    loading = fetch('/data/search.json', { cache: 'no-store' })
       .then((r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         return r.json();
@@ -208,6 +209,28 @@ export function installSearch(map: maplibregl.Map) {
   }
 
   // ── 查询 ──────────────────────────────────────────────────
+  /**
+   * 子序列匹配：query 的字符按顺序出现在目标串里，中间允许夹别的字。
+   * 「色达五明佛学院」就是这么命中「色达喇荣五明佛学院」的——
+   * 名字中间多了个「喇荣」，子串匹配断了，子序列还能连上。
+   * 间隙越多分越低，避免太散的匹配排前面。
+   */
+  function subseq(hay: string, needle: string, base: number): number {
+    if (!hay) return 0;
+    let cursor = 0;
+    let gaps = 0;
+    let last = -1;
+    for (const ch of needle) {
+      const idx = hay.indexOf(ch, cursor);
+      if (idx < 0) return 0;
+      if (last >= 0) gaps += idx - last - 1;
+      last = idx;
+      cursor = idx + 1;
+    }
+    if (gaps > needle.length * 2 + 2) return 0;
+    return Math.max(140, base - gaps * 6);
+  }
+
   function scoreOf(e: Entry, q: string): number {
     const name = e.name.toLowerCase();
     const py = e.py;
@@ -221,7 +244,12 @@ export function installSearch(map: maplibregl.Map) {
     else if (py && py.startsWith(q)) s = 520;
     else if (pyi && pyi.startsWith(q)) s = 500;
     else if (py && py.includes(q)) s = 380;
-    else if (q.length > 1) return 0; // 单字只做前缀匹配，否则命中太散
+    else if (q.length >= 3) {
+      // 名字里夹了别的字 / 打了部分拼音：退一步做子序列匹配
+      s = Math.max(subseq(name, q, 330), subseq(py, q, 300), subseq(pyi, q, 290));
+    } else if (q.length > 1) {
+      return 0;
+    }
     return s;
   }
 
