@@ -1,6 +1,49 @@
 import type * as maplibregl from 'maplibre-gl';
 
 /**
+ * 抹掉「地形手势结束时的相机回弹」。
+ *
+ * MapLibre 在地形手势期间会冻结相机高程（拖动时保持等高），手势一结束就用**新采样**的
+ * DEM 高程去对账：调 `transform.recalculateZoomAndCenter`，保持相机 3D 位置不动，
+ * 反过来重算 center 和 zoom。俯角很陡时，冻结值与新值的差 Δe 会沿视线把中心滑走
+ * `Δe · tan(pitch)`（85° 时约 11 倍）——在川西这种落差上就是「地图突然跑到几百公里外」。
+ *
+ * 官方给的解法：**只在手势窗口内**把 `getCenterClampedToGround()` 遮成 false，
+ * 不要动字段本身。因为 v6 里有两个闸口会读它：
+ *   · HandlerManager 读 Map 上的同名方法
+ *   · Camera._finalizeElevation 读 `map._camera` 上的方法
+ * 两个都得遮，且只能在 movestart→moveend 之间遮——静止时还要靠它每帧跟随地形，
+ * 永久关掉会让相机「浮」在那里，平移时产生视差漂移（我们之前就是这么干的）。
+ */
+
+export function preventTerrainGestureSnap(map: maplibregl.Map) {
+  const gates: any[] = [map as any, (map as any)._camera].filter(
+    (g) => g && typeof g.getCenterClampedToGround === 'function',
+  );
+  const saved = new Map<any, () => boolean>();
+  let depth = 0;
+
+  const engage = () => {
+    if (depth++ > 0) return;
+    for (const gate of gates) {
+      saved.set(gate, gate.getCenterClampedToGround);
+      gate.getCenterClampedToGround = () => false;
+    }
+  };
+  const release = () => {
+    if (depth === 0 || --depth > 0) return;
+    for (const [gate, fn] of saved) gate.getCenterClampedToGround = fn;
+    saved.clear();
+  };
+
+  map.on('movestart', engage);
+  map.on('moveend', release);
+  // 保险：动画被打断时 moveend 可能不来
+  map.on('remove', release);
+  return release;
+}
+
+/**
  * Alt + 左键 = 绕屏幕中心旋转视角（MapLibre 原来 Shift 拖动的行为）。
  *
  * Shift + 左键已经交给 MapLibre 的 `dragRotate: { around: 'pointer' }`，
@@ -39,6 +82,7 @@ function patchHandlers(map: maplibregl.Map) {
 }
 
 export function installGestures(map: maplibregl.Map) {
+  preventTerrainGestureSnap(map);
   patchHandlers(map);
   installAltRotate(map);
 }

@@ -17,8 +17,6 @@ interface Graphics {
   lod: LodKey;
   aniso: AnisoKey;
   prefetch: boolean;
-  /** 相机中心高程是否跟随地面。关掉可以消除缩放后 DEM 到货引起的高度跳变 */
-  followTerrain: boolean;
 }
 
 interface PanelState {
@@ -38,9 +36,9 @@ const LOD_PARAMS: Record<LodKey, [number, number]> = {
 /** 各向异性过滤生效的俯角阈值：越小越常用、越清晰也越慢 */
 const ANISO_PITCH: Record<AnisoKey, number> = { off: 90, default: 20, strong: 0 };
 const PRESETS: Record<Exclude<PresetKey, 'custom'>, Omit<Graphics, 'preset'>> = {
-  saver: { ratio: '1', lod: 'low', aniso: 'off', prefetch: false, followTerrain: false },
-  balanced: { ratio: 'auto', lod: 'mid', aniso: 'default', prefetch: true, followTerrain: false },
-  high: { ratio: '2', lod: 'high', aniso: 'strong', prefetch: true, followTerrain: false },
+  saver: { ratio: '1', lod: 'low', aniso: 'off', prefetch: false },
+  balanced: { ratio: 'auto', lod: 'mid', aniso: 'default', prefetch: true },
+  high: { ratio: '2', lod: 'high', aniso: 'strong', prefetch: true },
 };
 
 const DEFAULT_STATE: PanelState = {
@@ -54,7 +52,6 @@ const DEFAULT_STATE: PanelState = {
     lod: 'mid',
     aniso: 'default',
     prefetch: true,
-    followTerrain: false,
   },
 };
 
@@ -166,9 +163,6 @@ export function installPanel(map: maplibregl.Map) {
     map.setSourceTileLodParams(levels, ratio);
     map.setAnisotropicFilterPitch(ANISO_PITCH[g.aniso]);
     prefetchState.enabled = g.prefetch;
-    // 关掉「跟随地面高程」：MapLibre 在静止时每帧都会把相机中心高程重置成
-    // 当前 DEM 在该点的值，缩放后新的 DEM 瓦片一到货高程就变，相机高度跟着跳。
-    map.setCenterClampedToGround(g.followTerrain);
   }
 
   // ── 抽屉 ─────────────────────────────────────────────────
@@ -387,19 +381,6 @@ export function installPanel(map: maplibregl.Map) {
     ));
     anisoField.append(el('div', 'note', '各向异性过滤的俯角阈值，越早生效远处越锐，开销也越大。'));
     body.append(anisoField);
-
-    const camField = el('div', 'field');
-    const cl = el('div', 'label');
-    cl.append(el('span', undefined, '相机'));
-    camField.append(cl);
-    const camRow = el('div', 'layer-row');
-    camRow.append(el('span', 'name', '跟随地面高程'));
-    camRow.append(makeSwitch(g.followTerrain, (v) => set({ followTerrain: v })));
-    camField.append(camRow);
-    camField.append(el('div', 'note',
-      '开启后相机会贴着地面走（更贴近飞行感），但缩放后 DEM 瓦片到货时中心高程会被重置，' +
-      '高度会跳一下。关掉则保持恒定高度基准，代价是相机不随地形起伏。'));
-    body.append(camField);
 
     const pfField = el('div', 'field');
     const pfl = el('div', 'label');

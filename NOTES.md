@@ -336,3 +336,52 @@ patch(dragPan,   e => e.button===0 && !e.shiftKey && !e.ctrlKey && !e.altKey);
 bearing ≠ 0 时，地形 drape 的 **relief 栅格**会出现绿色竖向条纹 + 少量黑色碎片
 （`terrain` 开、`relief` 层隐藏后消失）。在 SwiftShader 下稳定复现，
 关掉各向异性过滤无效。怀疑是 MapLibre 旋转后 RTT 贴图变换的问题，需要真机确认。
+
+## 修：地图「突然跑到几百公里外」（2026-10-22）
+
+### 根因（MapLibre 已知行为）
+地形手势期间 MapLibre 会**冻结相机高程**（拖动时保持等高）。手势一结束，
+它拿冻结值和新采样的 DEM 高程对账，调 `transform.recalculateZoomAndCenter`：
+保持相机 3D 位置不动，反过来重算 **center 和 zoom**。俯角陡的时候，
+Δe 会沿视线把中心滑走 `Δe · tan(pitch)`（85° 约 11 倍），同时 zoom 被重算，
+于是「停手的一瞬间地图被拽走一大截」。平地上几米的高程差就能看出来，
+川西这种落差上直接是几公里起步，叠加 zoom 重算就是「跑出几百公里」。
+
+### 之前那版为什么是反的
+我上次为了消掉「放大后 DEM 到货导致高度跳变」，直接把
+`setCenterClampedToGround(false)` 永久写死。这个字段同时也管**每帧跟随地形**，
+关掉之后相机会「浮」在旧高程上：
+- 平移时地形从相机下面穿过去 → 视差漂移
+- 中心高程永远不更新 → 地形一换就各种异常
+
+也就是说：修好了小毛病，引入了大毛病。
+
+### 正确解法
+只在**手势窗口内**把 `getCenterClampedToGround()` 遮成 false，字段不动
+（`src/ui/gestures.ts` 的 `preventTerrainGestureSnap`）。
+
+v6 里有两个闸口会读这个方法，必须都遮：
+- `HandlerManager` 读 Map 上的同名方法
+- `Camera._finalizeElevation` 读 `map._camera` 上的方法
+
+静止时恢复真实方法，每帧跟随地形照常工作。
+
+实测：
+| 检查 | 结果 |
+|---|---|
+| 静止时 `getCenterClampedToGround()` | true |
+| 拖动中 | false |
+| 松手后 | true |
+| 松手瞬间中心位移（pitch 78 跨地形） | **0 km** |
+| 静止后滚轮缩放，中心高程是否跟随 | 5702 → 5945（跟随正常） |
+
+**代价**：缩放结束后新 DEM 瓦片到货时，相机仍有约 64 m 的小跳（z13 约 4 px）。
+这是「每帧跟随地形」换来的，比之前那套「float + 回弹」好得多。
+
+参考：
+- MapLibre 地形手势回弹的成因与解法（bitruvius SDK 的 `preventTerrainGestureSnap` 文档）
+  https://cdn.bitruvius.com/sdk/v0.3.2/docs/functions/_bitruvius_sdk-maplibre.preventTerrainGestureSnap.html
+- GeoLibre 同类修复：unclamp map center while terrain is on
+  https://github.com/opengeos/GeoLibre/commit/9cfc1f672078f7057309907068cabeb4a3c26e54
+
+同时移除了图形设置里的「相机 › 跟随地面高程」开关（不再需要，字段改由手势窗口控制）。
