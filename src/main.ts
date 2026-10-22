@@ -55,6 +55,23 @@ async function pruneStyle(style: any): Promise<any> {
  * 附加区域：把区域 A 的每个图层按区域复制一份，source 指向 `<id><suffix>`。
  * 缺文件的 source 已经在 pruneStyle 里被删掉，所以没数据的区域不会产生任何图层。
  */
+/**
+ * 跨区域时切换地形 source —— MapLibre 只支持挂一个 terrain。
+ * 之前只在 setTerrain 的时候挑过一次：从山西/重庆搜回川西，地形还指着 dem-b/dem-c，
+ * 那边没有瓦片，于是「地形就没了」，得按两次 T 才会用新中心重新挑。
+ */
+function installTerrainRegionSwitch(map: maplibregl.Map) {
+  const sync = () => {
+    const cur = map.getTerrain();
+    if (!cur) return; // 地形是关着的，别自作主张打开
+    const want = pickTerrainSource(map.getCenter());
+    if (want === cur.source || !map.getSource(want)) return;
+    map.setTerrain({ source: want, exaggeration: cur.exaggeration });
+  };
+  map.on('moveend', sync);
+  map.on('load', sync);
+}
+
 function expandRegions(style: any): any {
   const REGION_SOURCES = ['dem', 'relief', 'osm', 'hiking', 'contours'];
   const swap = new Map<string, string[]>();
@@ -142,6 +159,7 @@ async function main() {
   installSearch(map);
   installViewControls(map);
   installGestures(map);
+  installTerrainRegionSwitch(map);
 }
 
 function installDestinations(map: maplibregl.Map) {
