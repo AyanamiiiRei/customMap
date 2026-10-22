@@ -175,34 +175,46 @@ export function installSearch(map: maplibregl.Map) {
   btn?.addEventListener('click', () => toggle(true));
 
   // ── 索引 ──────────────────────────────────────────────────
+  /** 主索引 + 附加区域索引（区域 B/C… 由 region-build.sh 生成），后者可能不存在 */
+  const INDEX_FILES = ['/data/search.json', '/data/search-extra.json'];
+
+  function parseIndex(d: any): Entry[] {
+    const names: string[] = d.names ?? [];
+    const types: string[] = d.types ?? [];
+    const py: string[] = d.py ?? [];
+    const pyi: string[] = d.pyi ?? [];
+    const recs = d.recs ?? [];
+    const out: Entry[] = new Array(recs.length);
+    recs.forEach((r: number[], i: number) => {
+      out[i] = {
+        lon: r[0],
+        lat: r[1],
+        type: types[r[2]] ?? 'place',
+        ele: r[3],
+        name: names[r[4]] ?? '',
+        py: py[r[4]] ?? '',
+        pyi: pyi[r[4]] ?? '',
+      };
+    });
+    return out;
+  }
+
   function loadIndex(): Promise<Entry[]> {
     if (entries) return Promise.resolve(entries);
     if (loading) return loading;
     // no-store：索引会随数据重建，浏览器缓存住的旧版本会让新类型搜不到
-    loading = fetch('/data/search.json', { cache: 'no-store' })
-      .then((r) => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        return r.json();
-      })
-      .then((d: any) => {
-        const names: string[] = d.names ?? [];
-        const types: string[] = d.types ?? [];
-        const py: string[] = d.py ?? [];
-        const pyi: string[] = d.pyi ?? [];
-        const out: Entry[] = new Array((d.recs ?? []).length);
-        (d.recs ?? []).forEach((r: number[], i: number) => {
-          out[i] = {
-            lon: r[0],
-            lat: r[1],
-            type: types[r[2]] ?? 'place',
-            ele: r[3],
-            name: names[r[4]] ?? '',
-            py: py[r[4]] ?? '',
-            pyi: pyi[r[4]] ?? '',
-          };
-        });
-        entries = out;
-        return out;
+    loading = Promise.all(
+      INDEX_FILES.map((f) =>
+        fetch(f, { cache: 'no-store' })
+          .then((r) => (r.ok ? r.json() : null))
+          .catch(() => null),
+      ),
+    )
+      .then((parts) => {
+        const all = parts.filter(Boolean).flatMap((d) => parseIndex(d));
+        if (!all.length) throw new Error('索引为空');
+        entries = all;
+        return all;
       })
       .catch((e) => {
         console.warn('[search] 索引不可用：', e);

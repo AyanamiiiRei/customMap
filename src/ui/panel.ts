@@ -2,6 +2,7 @@ import type * as maplibregl from 'maplibre-gl';
 import { LAYER_GROUPS, type LayerGroup } from '../layers';
 import { prefetchState } from '../prefetch';
 import { perfStats } from './hud';
+import { pickTerrainSource } from '../regions';
 
 const LS_KEY = 'chuanxi-map-state-v2';
 
@@ -146,8 +147,9 @@ export function installPanel(map: maplibregl.Map) {
   }
 
   function applyTerrain(on: boolean, ex: number) {
-    if (!map.getSource('dem')) return;
-    map.setTerrain(on ? { source: 'dem', exaggeration: ex } : null);
+    const src = pickTerrainSource(map.getCenter());
+    if (!map.getSource(src)) return;
+    map.setTerrain(on ? { source: src, exaggeration: ex } : null);
   }
 
   // ── 图形设置 ─────────────────────────────────────────────

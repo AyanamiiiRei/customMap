@@ -508,3 +508,43 @@ dev/prod 都给 `/data/` 加了 `max-age=3600`，我这边重建了索引，但�
 （`滑噜噜四季滑雪场` 原先来自 `leisure=park`，现在也标成滑雪场。）
 
 雪场总数 34 个。
+
+## 研究区南扩到滇西北（大理）（2026-10-22）
+
+**迪庆本来就在范围里**：原 bbox 96–105 / 26–35 已经覆盖迪庆全境（香格里拉 27.8N、
+德钦 28.5N、维西 27.2N），DEM 瓦片 N26–N29 × E098–E100 早就在，索引里也有
+香格里拉市 / 梅里雪山观景台 / 雨崩上村 / 松赞林寺。缺的只有大理（24.66–26.70N）。
+
+**新 bbox：96.0, 24.6, 105.0, 35.0**（大理州界线 98.86–101.04 / 24.66–26.70 包含在内）。
+
+改动：
+- `pipeline/env.sh` 新增 `REGION_BBOX`，00/01/02/06/09/03/fetch-all 全部改成读它，
+  以后调范围只改一处
+- 09 等高线的 `--bbox 96,26,105,35` 是写死的，改成读 `$REGION_BBOX`
+- `11-search-index.py` 的 BBOX 改成读环境变量，`check-bbox/check-search` 同步更新
+- 补下 DEM 南部两行（N24/N25，18 片 0.8 GB）；WorldCover 本来就从 24°N 起，不用补
+- 重新抽取 OSM：`data/raw/chuanxi.osm.pbf` 119 MB → 154 MB（2560 万节点）
+
+**重建**（约 1.5 小时，中间机器睡过一次，用 systemd-inhibit 续跑）：
+| 产物 | 之前 | 现在 |
+|---|---|---|
+| dem.pmtiles | 1.4 GB | 1.5 GB |
+| relief.pmtiles | 566 MB | 689 MB |
+| osm.pmtiles | 262 MB | 324 MB |
+| contours.pmtiles | 434 MB | 494 MB |
+| hiking.pmtiles | 26 MB | 37 MB |
+| search.json | 3.08 MB | 4.08 MB（52,645 → 69,681 条）|
+
+大理实测：洱海、苍山、大理市、喜洲镇、双廊镇、挖色镇都在，地形/晕渲正常。
+
+## 多区域拼接（山西）
+
+架构：
+- 区域 A 的 source 叫 `dem/relief/osm/hiking/contours`；
+  附加区域每个都有自己的 `<前缀>-*.pmtiles`，样式里声明成 `<id>-b`
+- `src/regions.ts` 定义附加区域的 bbox；`main.ts` 的 `expandRegions()`
+  把区域 A 的每个图层复制一份指到 `-b`，缺文件时 `pruneStyle` 已经把 source
+  删了，复制自然不会发生
+- 地形只能挂一个 source，所以按当前中心落在哪个 bbox 切换（`pickTerrainSource`）
+- 搜索：前端同时读 `/data/search.json` 和 `/data/search-extra.json`
+- `pipeline/region-build.sh`：给定名字+bbox+pbf，产出一整套带前缀的瓦片

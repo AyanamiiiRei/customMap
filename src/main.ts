@@ -10,6 +10,7 @@ import { installSearch } from './ui/search';
 import { installViewControls } from './ui/viewknob';
 import { installGestures } from './ui/gestures';
 import { DESTINATIONS, HOME_VIEW } from './destinations';
+import { EXTRA_REGIONS, pickTerrainSource } from './regions';
 
 maplibregl.addProtocol('pmtiles', new Protocol().tile);
 // 提前把 worker / 字形等运行时资源建好，避免第一次交互时才初始化
@@ -50,9 +51,32 @@ async function pruneStyle(style: any): Promise<any> {
   return style;
 }
 
+/**
+ * 附加区域：把区域 A 的每个图层复制一份，source 指向 `<id>-b`。
+ * 缺文件的 source 已经在 pruneStyle 里被删掉，所以没数据时这里什么也不做。
+ */
+function expandRegions(style: any): any {
+  const suffix = EXTRA_REGIONS[0]?.suffix ?? '-b';
+  const swap = new Map<string, string>();
+  for (const id of ['dem', 'relief', 'osm', 'hiking', 'contours']) {
+    if (style.sources[`${id}${suffix}`] && style.sources[id]) swap.set(id, `${id}${suffix}`);
+  }
+  if (!swap.size) return style;
+
+  const out: any[] = [];
+  for (const layer of style.layers) {
+    out.push(layer);
+    const twin = layer.source ? swap.get(layer.source) : undefined;
+    if (!twin) continue;
+    out.push({ ...structuredClone(layer), id: `${layer.id}${suffix}`, source: twin });
+  }
+  style.layers = out;
+  return style;
+}
+
 async function main() {
   const raw = JSON.parse(JSON.stringify(styleJson));
-  const style = await pruneStyle(raw);
+  const style = expandRegions(await pruneStyle(raw));
 
   const map = new maplibregl.Map({
     container: 'map',
@@ -91,7 +115,7 @@ async function main() {
 
   map.on('load', () => {
     if (map.getSource('dem')) {
-      map.setTerrain({ source: 'dem', exaggeration: 1.3 });
+      map.setTerrain({ source: pickTerrainSource(map.getCenter()), exaggeration: 1.3 });
     }
     map.setLight({ anchor: 'viewport', position: [1.5, 90, 80] });
     // LOD / 渲染分辨率 / 各向异性过滤由「图形」设置页统一施加（src/ui/panel.ts），

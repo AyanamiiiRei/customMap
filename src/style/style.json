@@ -67,6 +67,29 @@
       "url": "pmtiles:///data/relief-world.pmtiles",
       "tileSize": 256,
       "maxzoom": 7
+    },
+    "dem-b": {
+      "type": "raster-dem",
+      "url": "pmtiles:///data/sx-dem.pmtiles",
+      "maxzoom": 12
+    },
+    "relief-b": {
+      "type": "raster",
+      "url": "pmtiles:///data/sx-relief.pmtiles",
+      "maxzoom": 13
+    },
+    "osm-b": {
+      "type": "vector",
+      "url": "pmtiles:///data/sx-osm.pmtiles"
+    },
+    "hiking-b": {
+      "type": "vector",
+      "url": "pmtiles:///data/sx-hiking.pmtiles"
+    },
+    "contours-b": {
+      "type": "vector",
+      "url": "pmtiles:///data/sx-contours.pmtiles",
+      "maxzoom": 15
     }
   },
   "terrain": {

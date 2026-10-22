@@ -13,7 +13,7 @@ mkdir -p "$WORK/contours"
 
 # 分层间隔: z9-11→500m, z12-13→200m, z14→100m, z15→50m
 if ! ls "$WORK"/contours/contours-z9.geojsonl >/dev/null 2>&1; then
-  "$BIN" --dem "$WORK/dem_3857.tif" --output "$WORK/contours/contours.geojsonl" --bbox 96,26,105,35
+  "$BIN" --dem "$WORK/dem_3857.tif" --output "$WORK/contours/contours.geojsonl" --bbox "$REGION_BBOX"
 fi
 
 tippecanoe -o "$WORK/contours/c-z9.mbtiles"  -z11 -Z9  --force --no-feature-limit --simplify-only-low-zooms -L contours:"$WORK/contours/contours-z9.geojsonl"

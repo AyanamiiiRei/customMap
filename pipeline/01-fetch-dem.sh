@@ -6,7 +6,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 source pipeline/env.sh
 
-BBOX="${1:-96.0,26.0,105.0,35.0}"
+BBOX="${1:-$REGION_BBOX}"
 IFS=',' read -r MINX MINY MAXX MAXY <<< "$BBOX"
 RAW="data/raw/dem"
 mkdir -p "$RAW"

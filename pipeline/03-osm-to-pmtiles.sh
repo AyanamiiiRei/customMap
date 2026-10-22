@@ -30,7 +30,7 @@ if [ ! -s "$WORK/osm.mbtiles" ]; then
   java -Xmx24g -jar tools/planetiler.jar \
     --osm-path="$IN" \
     --output="$WORK/osm.mbtiles" --force \
-    --bounds=96.0,26.0,105.0,35.0
+    --bounds=$REGION_BBOX
 fi
 
 if [ ! -s public/data/osm.pmtiles ]; then

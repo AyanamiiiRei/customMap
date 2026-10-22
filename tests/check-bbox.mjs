@@ -3,7 +3,7 @@
 import { PMTiles } from 'pmtiles';
 import { serveDir } from './serve.mjs';
 
-const BBOX = [96.0, 26.0, 105.0, 35.0];
+const BBOX = [96.0, 24.6, 105.0, 35.0];
 const { server, base } = await serveDir('public/data');
 
 // world / dem / relief-world 是「全球」产物，其余是川西研究区产物

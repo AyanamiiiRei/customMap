@@ -3,7 +3,7 @@
 import { readFileSync } from 'node:fs';
 
 const FILE = 'public/data/search.json';
-const BBOX = [96.0, 26.0, 105.0, 35.0];
+const BBOX = [96.0, 24.6, 105.0, 35.0];
 let fail = 0;
 
 const err = (msg) => { console.error(`  ✗ ${msg}`); fail = 1; };
@@ -24,7 +24,7 @@ const types = d.types ?? [];
 
 if (d.v !== 1) err(`version 应为 1，实际 ${d.v}`);
 const mb = Buffer.byteLength(raw) / 1048576;
-if (mb > 3.5) err(`体积 ${mb.toFixed(2)} MB 超过 3.5 MB 上限`);
+if (mb > 5.0) err(`体积 ${mb.toFixed(2)} MB 超过 5 MB 上限`);
 if (recs.length < 5000) err(`条目只有 ${recs.length}，预期 > 5000`);
 else ok(`条目 ${recs.length.toLocaleString()}，名称 ${names.length.toLocaleString()}，${mb.toFixed(2)} MB`);
 

@@ -16,10 +16,12 @@ from __future__ import annotations
 
 import json
 import math
+import os
 import sys
 from pathlib import Path
 
-BBOX = (96.0, 26.0, 105.0, 35.0)
+_env = os.environ.get("REGION_BBOX", "96.0,24.6,105.0,35.0")
+BBOX = tuple(float(v) for v in _env.split(","))
 LON_MIN, LAT_MIN, LON_MAX, LAT_MAX = BBOX
 
 TYPES = [

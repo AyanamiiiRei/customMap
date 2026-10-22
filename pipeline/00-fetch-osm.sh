@@ -5,7 +5,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 source pipeline/env.sh
 
-BBOX="${1:-96.0,26.0,105.0,35.0}"
+BBOX="${1:-$REGION_BBOX}"
 RAW="data/raw"
 mkdir -p "$RAW" data/work
 
