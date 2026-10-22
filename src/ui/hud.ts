@@ -1,13 +1,21 @@
 import type * as maplibregl from 'maplibre-gl';
 
-/** 左上角信息条：经纬度 + 海拔（queryTerrainElevation）+ zoom + FPS */
+/**
+ * 左下角仪表盘：坐标 / 海拔 / 相机视角高度 / 缩放 / FPS。
+ * 逐个写 DOM 文本而不是整块 innerHTML，避免每 250ms 重建节点把鼠标选中打断。
+ */
 export function installHud(map: maplibregl.Map) {
-  const hud = document.getElementById('hud')!;
+  const posEl = document.getElementById('hudPos')!;
+  const eleEl = document.getElementById('hudEle')!;
+  const altEl = document.getElementById('hudAlt')!;
+  const zoomEl = document.getElementById('hudZoom')!;
+  const fpsEl = document.getElementById('hudFps')!;
+  const fpsNum = fpsEl.querySelector('span')!;
 
   let lngLat: maplibregl.LngLat | null = null;
   // queryTerrainElevation 返回的是「乘过 exaggeration 之后」的高度
-  // （官方文档：value returned here will be reflective of (multiplied by) that exaggeration value）。
-  // 所以这里存原始值，显示时再除以当前的夸张度，否则 1.3 倍下成都 494m 会显示成 642m。
+  // （官方文档：value returned here is reflective of (multiplied by) that exaggeration value）。
+  // 所以这里存原始值，显示时再除以当前夸张度，否则 1.3 倍下成都 494m 会显示成 642m。
   let rawElev: number | null = null;
   let zoom = map.getZoom();
   let fps = 0;
@@ -32,6 +40,11 @@ export function installHud(map: maplibregl.Map) {
     }
   });
 
+  function setValue(el: HTMLElement, text: string, dim: boolean) {
+    if (el.textContent !== text) el.textContent = text;
+    el.classList.toggle('dim', dim);
+  }
+
   /**
    * 相机海拔（米，海平面起算）。
    * MapLibre 6 的 Map 上没有公开 getCameraAltitude()，只有内部 transform 有；
@@ -47,21 +60,27 @@ export function installHud(map: maplibregl.Map) {
     return a - map.getCenterElevation() * (1 - 1 / (ex > 0 ? ex : 1));
   }
 
-  function fmt(ll: maplibregl.LngLat): string {
+  function fmtLL(ll: maplibregl.LngLat): string {
     const ns = ll.lat >= 0 ? 'N' : 'S';
     const ew = ll.lng >= 0 ? 'E' : 'W';
-    return `${Math.abs(ll.lng).toFixed(4)}°${ew}  ${Math.abs(ll.lat).toFixed(4)}°${ns}`;
+    return `${Math.abs(ll.lng).toFixed(4)}°${ew} ${Math.abs(ll.lat).toFixed(4)}°${ns}`;
   }
 
   setInterval(() => {
-    const pos = lngLat ? fmt(lngLat) : '—';
+    setValue(posEl, lngLat ? fmtLL(lngLat) : '—', !lngLat);
+
     const ex = map.getTerrain()?.exaggeration ?? 1;
     const elev = rawElev != null ? rawElev / (ex > 0 ? ex : 1) : null;
-    const ele = elev != null && elev > -100 ? `${elev.toFixed(0)} m` : '—';
+    const eleOk = elev != null && elev > -100;
+    setValue(eleEl, eleOk ? `${elev!.toFixed(0)} m` : '—', !eleOk);
+
     const alt = cameraAltitude();
-    const altTxt = alt != null ? `${alt.toFixed(0)} m` : '—';
-    hud.innerHTML =
-      `经纬度 ${pos}\n海拔   ${ele}\n视角   ${altTxt}\n缩放   z${zoom.toFixed(1)}\n` +
-      `<span class="fps">FPS    ${fps}</span>`;
+    setValue(altEl, alt != null ? `${alt.toFixed(0)} m` : '—', alt == null);
+
+    setValue(zoomEl, `z${zoom.toFixed(1)}`, false);
+
+    if (fpsNum.textContent !== String(fps)) fpsNum.textContent = String(fps);
+    fpsEl.classList.toggle('warn', fps > 0 && fps < 40);
+    fpsEl.classList.toggle('bad', fps > 0 && fps < 20);
   }, 250);
 }

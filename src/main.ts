@@ -1,6 +1,7 @@
 import * as maplibregl from 'maplibre-gl';
 import { Protocol } from 'pmtiles';
 import 'maplibre-gl/dist/maplibre-gl.css';
+import './ui/ui.css';
 import styleJson from './style/style.json';
 import { installPanel } from './ui/panel';
 import { installHud } from './ui/hud';
@@ -10,11 +11,18 @@ maplibregl.addProtocol('pmtiles', new Protocol().tile);
 // 提前把 worker / 字形等运行时资源建好，避免第一次交互时才初始化
 maplibregl.prewarm();
 
-const DESTINATIONS: Array<{ name: string; center: [number, number]; zoom: number }> = [
-  { name: '贡嘎山', center: [101.88, 29.6], zoom: 14 },
-  { name: '四姑娘山', center: [102.9, 31.1], zoom: 14 },
-  { name: '稻城亚丁', center: [100.3, 28.45], zoom: 14 },
+const HOME = { center: [101.8, 31.0] as [number, number], zoom: 2.6 };
+
+const DESTINATIONS: Array<{ name: string; sub: string; center: [number, number]; zoom: number }> = [
+  { name: '贡嘎山', sub: '7556 m', center: [101.88, 29.6], zoom: 14 },
+  { name: '四姑娘山', sub: '6250 m', center: [102.9, 31.1], zoom: 14 },
+  { name: '稻城亚丁', sub: '6032 m', center: [100.3, 28.45], zoom: 14 },
 ];
+
+const PIN_ICON =
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" ' +
+  'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+  '<path d="m3 18 6-9 3.5 5 2.5-3 6 7z"/></svg>';
 
 async function exists(url: string): Promise<boolean> {
   try {
@@ -78,7 +86,7 @@ async function main() {
   });
 
   map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'bottom-right');
-  map.addControl(new maplibregl.ScaleControl({ unit: 'metric' }), 'bottom-left');
+  map.addControl(new maplibregl.ScaleControl({ unit: 'metric', maxWidth: 92 }), 'bottom-right');
   map.addControl(new maplibregl.FullscreenControl(), 'bottom-right');
 
   map.on('load', () => {
@@ -87,10 +95,13 @@ async function main() {
     }
     map.setLight({ anchor: 'viewport', position: [1.5, 90, 80] });
     // 俯视时让远处也能拿到更细的瓦片：
-    //   第一个参数 = 同屏允许的 zoom 级数（越大，地平线方向的 LOD 衰减越慢）
-    //   第二个参数 = 高 pitch 下允许加载的瓦片数相对最小值倍率
-    // 默认值在 60° 俯角下，屏幕上缘的地形会比下缘糊一大截。
-    map.setSourceTileLodParams(3, 5);
+    //   第 1 个参数 = 同屏允许的 zoom 级数。调大能让地平线方向更清晰，但不同
+    //     zoom 级之间会出现可见的分层带（实测 3 就会在坡面上出现绿色条纹），
+    //     所以这里保持 2。
+    //   第 2 个参数 = 高 pitch 下允许加载的瓦片数倍率。实测调到 4~5 时远处
+    //     更清楚，但坡面上会出现一条明显的绿色分层带（不同 zoom 的瓦片混在
+    //     一起渲染），所以停在 2。
+    map.setSourceTileLodParams(2, 2);
     (window as any).__mapLoaded = true;
   });
   map.on('idle', () => { (window as any).__mapIdle = true; });
@@ -112,11 +123,18 @@ function installDestinations(map: maplibregl.Map) {
   const bar = document.getElementById('dest')!;
   for (const d of DESTINATIONS) {
     const btn = document.createElement('button');
-    btn.textContent = d.name;
+    btn.className = 'chip';
+    btn.type = 'button';
+    btn.title = `${d.name} · ${d.sub}`;
+    btn.innerHTML = `${PIN_ICON}<span>${d.name}</span><em>${d.sub}</em>`;
     btn.onclick = () =>
       map.flyTo({ center: d.center, zoom: d.zoom, pitch: 60, duration: 4000 });
     bar.appendChild(btn);
   }
+
+  document.getElementById('homeBtn')!.addEventListener('click', () => {
+    map.flyTo({ ...HOME, pitch: 0, bearing: 0, duration: 1800 });
+  });
 }
 
 main();
