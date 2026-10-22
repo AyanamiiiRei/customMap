@@ -71,7 +71,10 @@
     "dem-b": {
       "type": "raster-dem",
       "url": "pmtiles:///data/sx-dem.pmtiles",
-      "maxzoom": 12
+      "encoding": "terrarium",
+      "tileSize": 256,
+      "maxzoom": 12,
+      "attribution": "Copernicus DEM GLO-30"
     },
     "relief-b": {
       "type": "raster",

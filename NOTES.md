@@ -548,3 +548,28 @@ dev/prod 都给 `/data/` 加了 `max-age=3600`，我这边重建了索引，但�
 - 地形只能挂一个 source，所以按当前中心落在哪个 bbox 切换（`pickTerrainSource`）
 - 搜索：前端同时读 `/data/search.json` 和 `/data/search-extra.json`
 - `pipeline/region-build.sh`：给定名字+bbox+pbf，产出一整套带前缀的瓦片
+
+## 山西接入（2026-10-22 深夜）
+
+`pipeline/region-build.sh sx "110.2195,34.5841,114.5629,40.7450" data/raw/shanxi.osm.pbf`
+约 25 分钟跑完：
+
+| 产物 | 大小 |
+|---|---|
+| sx-dem.pmtiles | 344 MB |
+| sx-relief.pmtiles | 270 MB |
+| sx-osm.pmtiles | 176 MB |
+| sx-contours.pmtiles | 97 MB |
+| sx-hiking.pmtiles | 5 MB |
+| search-extra.json | 3.1 MB |
+
+区域 A 3.5 GB + 山西 0.9 GB ≈ **4.0 GB**，仍在 5 GB 预算内。
+
+**踩到的一个坑**：`dem-b` 的 source 漏了 `"encoding": "terrarium"`。
+dem2tiles 产的是 terrarium 编码，但 MapLibre 的 raster-dem 默认按 `mapbox` 解码，
+于是高程被算成 **1,103,227 米**，相机沉到地下 20 多万米，整张图全黑。
+region A 的 `dem` 一直带着这个字段，新建 `dem-b` 时漏了。
+补上后太原高程 1004 m，正常。
+
+验证：太原 / 晋中 / 小店区 / 清徐县 / 太原武宿国际机场 都在，地形、晕渲、铁路正常；
+搜「太原」返回 太原站 / 太原市 / 太原尧城机场 / 太原武宿国际机场。
